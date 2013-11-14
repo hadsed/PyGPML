@@ -8,6 +8,7 @@ http://www.gaussianprocess.org/gpml/code/matlab/doc/
 This repo, so far, is implementing a small subset of the original MATLAB code from above. It implements a specific kernel for pattern recognition given by Andrew G. Wilson and Ryan P. Adams in the following references:
 
 [1] http://arxiv.org/abs/1302.4245
+
 [2] http://arxiv.org/abs/1310.5288
 
 And a resource page for this work is given here:
