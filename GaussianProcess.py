@@ -31,15 +31,16 @@ def sq_dist(A, B=None):
     C = C.clip(min=0)
     return C
 
-def initHyperParams(Q, x, y):
+def initHyperParams(Q, x, y, sn):
     """
     """
     n, D = x.shape
-    w = np.zeros((1,Q))
+    w = np.zeros(Q)
     m = np.zeros((D,Q))
     s = np.zeros((D,Q))
-    hypinit = np.zeros((Q+2*D*Q, 1))
-    w[0,:] = np.std(y) / Q
+    hypinit = np.zeros(Q+2*D*Q+1)
+    w[:] = np.std(y) / Q
+    hypinit[-1] = np.log(sn)
 
     for i in range(0,D):
         # Calculate distances
@@ -54,11 +55,10 @@ def initHyperParams(Q, x, y):
         maxshift = np.max(np.max(d2))
         s[i,:] = 1./np.abs(maxshift*np.random.ranf((1,Q)))
 
-    hypinit[0:Q] = np.log(w).T
+    hypinit[0:Q] = np.log(w)
     hypinit[Q + np.arange(0,Q*D)] = np.log(m[:]).T
     hypinit[Q + Q*D + np.arange(0,Q*D)] = np.log(s[:]).T
-
-    return np.array(hypinit).flatten() # Quick fix, this should be optimized later
+    return hypinit
 
 class GaussianProcess(object):
     def __init__(self, xTrain=None, yTrain=None, xTest=None, yTest=None, hyp=None,
@@ -80,7 +80,11 @@ class GaussianProcess(object):
         Return the negative log-likelihood of Z. This routine
         is used for optimization.
         """
-        return self.inf(hyp, self.xt, self.yt, False)
+        # Last parameter is always the noise variable
+        hypLik = hyp[-1]
+        hyp = hyp[0:-1]
+        self.hypLik = hyp
+        return self.inf(hyp, self.xt, self.yt, False, hypLik)
 
 
     def predict(self):
@@ -198,7 +202,7 @@ class GaussianProcess(object):
             # Training phase
             nlZ = ( (y-m).T*(alpha) / 2 + np.sum(np.log(np.diag(L))) +
                     n*np.log(2*np.pi*sn2)/2 )
-            return nlZ
+            return nlZ[0,0] # Some optimizers freak if you return a 1-element matrix
         else:
             # Prediction phase
             return alpha, L, sW
@@ -238,6 +242,23 @@ class GaussianProcess(object):
                 C = C*k(d2[:,:,j]*v[j,q], d[:,:,j]*m[j,q])
             K = K + C
 
+        return K
+
+
+    def _covSE(self, hyp, x=None, z=None, diag=False):
+        """
+        """
+        ell = np.exp(hyp[0])
+        sf2 = np.exp(2*hyp[1])
+
+        if diag:
+           K = np.zeros((x.shape[0],1))
+        else:
+            if x is z:
+                K = sq_dist(x.T/ell)
+            else:
+                K = sq_dist(x.T/ell, z.T/ell)
+        K = sf2*np.exp(-K/2)
         return K
 
 
