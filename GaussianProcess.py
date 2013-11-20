@@ -73,7 +73,7 @@ class GaussianProcess(object):
         self.lik = eval('self._' + lik)
         self.mean = eval('self._' + mean)
         self.hyp = hyp
-        self.hypLik = hypLik
+        self.hypLik = 0
         
     def train(self, hyp):
         """
@@ -83,7 +83,7 @@ class GaussianProcess(object):
         # Last parameter is always the noise variable
         hypLik = hyp[-1]
         hyp = hyp[0:-1]
-        self.hypLik = hyp
+        self.hypLik = hypLik
         return self.inf(hyp, self.xt, self.yt, False, hypLik)
 
 
@@ -237,7 +237,7 @@ class GaussianProcess(object):
         d = np.sqrt(d2)
 
         for q in range(0,Q):
-            C = w[q]
+            C = w[q]**2
             for j in range(0,D):
                 C = C*k(d2[:,:,j]*v[j,q], d[:,:,j]*m[j,q])
             K = K + C
