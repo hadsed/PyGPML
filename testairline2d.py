@@ -12,7 +12,7 @@ x2 = np.matrix(data['xtrain'])
 x = np.hstack((x1,x2))
 
 y1 = np.matrix(data['ytrain'])
-y2 = np.matrix(data['ytrain']) + 50
+y2 = np.matrix(data['ytrain']) + 500
 y = np.hstack((y1,y2))
 
 x1t = np.matrix(data['xtest'])
@@ -20,7 +20,7 @@ x2t = np.matrix(data['xtest'])
 xt = np.hstack((x1t,x2t))
 
 y1t = np.matrix(data['ytest'])
-y2t = np.matrix(data['ytest']) + 50
+y2t = np.matrix(data['ytest']) + 500
 yt = np.hstack((y1t,y2t))
 
 # To get interpolation too
@@ -28,11 +28,10 @@ yt = np.hstack((y1t,y2t))
 #yt = np.concatenate((y,yt))
 
 skipSM = False
-D = 1
 Q = 10
 
 negLogML = np.inf
-nItr = 1 if not skipSM else 1
+nItr = 10 if not skipSM else 1
 hypInit = []
 hypTrained = []
 

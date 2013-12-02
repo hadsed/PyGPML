@@ -38,9 +38,12 @@ def initHyperParams(Q, x, y, sn):
     w = np.zeros(Q)
     m = np.zeros((D,Q))
     s = np.zeros((D,Q))
-    hypinit = np.zeros(Q+2*D*Q+1)
     w[:] = np.std(y) / Q
-    hypinit[-1] = np.log(sn)
+    if sn is None:
+        hypinit = np.zeros(Q+2*D*Q)
+    else:
+        hypinit = np.zeros(Q+2*D*Q+1)
+        hypinit[-1] = np.log(sn)
 
     for i in range(0,D):
         # Calculate distances
@@ -62,8 +65,8 @@ def initHyperParams(Q, x, y, sn):
 
 class GaussianProcess(object):
     def __init__(self, xTrain=None, yTrain=None, xTest=None, yTest=None, hyp=None,
-                 hypLik=None, cov='covSM', inf='infExact', lik='likGauss', 
-                 mean='meanZero'):
+                 fixHypLik=False, hypLik=None, cov='covSM', inf='infExact', 
+                 lik='likGauss', mean='meanZero'):
         self.xt = xTrain
         self.yt = yTrain
         self.xs = xTest
@@ -73,17 +76,22 @@ class GaussianProcess(object):
         self.lik = eval('self._' + lik)
         self.mean = eval('self._' + mean)
         self.hyp = hyp
-        self.hypLik = 0
+        self.hypLik = hypLik
+        self.fixHypLik = fixHypLik
         
+
     def train(self, hyp):
         """
         Return the negative log-likelihood of Z. This routine
         is used for optimization.
         """
         # Last parameter is always the noise variable
-        hypLik = hyp[-1]
-        hyp = hyp[0:-1]
-        self.hypLik = hypLik
+        if self.fixHypLik:
+            hypLik = hyp[-1]
+            hyp = hyp[0:-1]
+            self.hypLik = hypLik
+        else:
+            hypLik = self.hypLik
         return self.inf(hyp, self.xt, self.yt, False, hypLik)
 
 
@@ -151,14 +159,23 @@ class GaussianProcess(object):
 
             # Iterate batch
             nProcessed = rng[-1] + 1
-#            print("Points processed (prediction mode): ", nProcessed)
+            print("Points processed (prediction mode): ", nProcessed, nPoints)
         
-        return {'ymu': ymu,
-                'ys2': ys2,
-                'fmu': fmu,
-                'fs2': fs2,
-                'lp': None if self.ys is None else lp,
-                'post': [alpha, L, sW] }
+        test = False
+        if test:
+            return {'ymu': Ymu,
+                    'ys2': Ys2,
+                    'fmu': Fmu,
+                    'fs2': Fs2,
+                    'lp': None if self.ys is None else Lp,
+                    'post': [alpha, L, sW] }
+        else:
+            return {'ymu': ymu,
+                    'ys2': ys2,
+                    'fmu': fmu,
+                    'fs2': fs2,
+                    'lp': None if self.ys is None else lp,
+                    'post': [alpha, L, sW] }
 
 
     def _likGauss(self, hyp=None, y=None, mu=None, s2=None, hypLik=0):

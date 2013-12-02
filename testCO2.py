@@ -5,7 +5,7 @@ from scipy import optimize as sopt
 
 import GaussianProcess as gp
 
-data = sio.loadmat('airlinedata.mat')
+data = sio.loadmat('CO2data.mat')
 
 x = np.matrix(data['xtrain'])
 y = np.matrix(data['ytrain'])
