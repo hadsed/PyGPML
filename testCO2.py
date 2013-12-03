@@ -19,7 +19,7 @@ skipSM = False
 Q = 10
 
 negLogML = np.inf
-nItr = 10
+nItr = 1
 
 # Define core functions
 likFunc = 'likGauss'
@@ -34,12 +34,17 @@ l2Optimizer = 'L-BFGS-B'
 l2Options = {'maxiter':100 if not skipSM else 1}
 
 # Noise std. deviation
-sn = 1
+fixHypLik = False
+sn = 1.0
+initArgs = {'Q':Q, 'x':x, 'y':y, 'samplingFreq':1, 'nPeaks':4}
+initArgs['sn'] = None if fixHypLik else sn
 
 # Random starts
 for itr in range(nItr):
     # Initialize hyperparams
-    hypGuess = gp.initHyperParams(Q,x,y,sn)
+#    hypGuess = gp.initHyperParams(Q,x,y,sn)
+    hypGuess = gp.initHyperParamsFourier(**initArgs)
+
     # Optimize the guessed hyperparams
     hypGP = gp.GaussianProcess(hyp=hypGuess, inf=infFunc, mean=meanFunc, 
                                cov=covFunc, lik=likFunc, hypLik=np.log(sn),
@@ -57,7 +62,7 @@ for itr in range(nItr):
         hypInit = hypTrained
         negLogML = newNegLogML
     print "Iteration: ", itr, newNegLogML
-
+print "Final", hypInit
 # Optimize the best hyperparams even more
 hypGP = gp.GaussianProcess(hyp=hypTrained, inf=infFunc, mean=meanFunc, cov=covFunc,
                            lik=likFunc, hypLik=np.log(sn), xTrain=x, yTrain=y)

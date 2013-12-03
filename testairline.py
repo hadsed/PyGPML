@@ -34,12 +34,17 @@ l2Optimizer = 'L-BFGS-B'
 l2Options = {'maxiter':100 if not skipSM else 1}
 
 # Noise std. deviation
-sn = 1
+fixHypLik = False
+sn = 1.0
+initArgs = {'Q':Q, 'x':x, 'y':y, 'samplingFreq':1, 'nPeaks':Q}
+initArgs['sn'] = None if fixHypLik else sn
 
 # Random starts
 for itr in range(nItr):
     # Initialize hyperparams
-    hypGuess = gp.initHyperParams(Q,x,y,sn)
+#    hypGuess = gp.initHyperParams(Q,x,y,sn)
+    hypGuess = gp.initHyperParamsFourier(**initArgs)
+
     # Optimize the guessed hyperparams
     hypGP = gp.GaussianProcess(hyp=hypGuess, inf=infFunc, mean=meanFunc, 
                                cov=covFunc, lik=likFunc, hypLik=np.log(sn),

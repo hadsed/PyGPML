@@ -5,6 +5,7 @@ Gaussian process
 import numpy as np
 from scipy import spatial as spatial
 from scipy import linalg as sln
+from scipy import signal as spsig
 
 def sq_dist(A, B=None):
     """
@@ -30,6 +31,58 @@ def sq_dist(A, B=None):
     # Make sure we're staying positive :)
     C = C.clip(min=0)
     return C
+
+def initHyperParamsFourier(Q, x, y, sn, samplingFreq, nPeaks):
+    """
+    """
+    n, D = x.shape
+    w = np.zeros(Q)
+    m = np.zeros((D,Q))
+    s = np.zeros((D,Q))
+    w[:] = np.std(y) / Q
+    if sn is None:
+        hypinit = np.zeros(Q+2*D*Q)
+    else:
+        hypinit = np.zeros(Q+2*D*Q+1)
+        hypinit[-1] = np.log(sn)
+
+    # Assign hyperparam weights
+    hypinit[0:Q] = np.log(w)
+
+    # Assign hyperparam frequencies (mu's)
+    signal = np.array(y.ravel()).ravel()  # Make into 1D array
+    n = x.shape[0]
+    k = np.arange(n)
+    ts = n/samplingFreq
+    frqx = k/float(ts)
+    frqx = frqx[range(n/2)]
+    frqy = np.fft.fft(signal)/n
+    frqy = abs(frqy[range(n/2)])
+    # Find the peaks in the frequency spectrum
+    peakIdx = spsig.argrelmax(np.log(frqy**2), order=2)[0]
+    # Find specified number (nPeaks) largest peaks
+    sortedIdx = frqy[peakIdx].argsort()[::-1][:nPeaks]
+    sortedPeakIdx = peakIdx[sortedIdx]
+    # import pylab as pl
+    # pl.plot(frqx,np.log(frqy**2), 'bx-', markersize=8)
+    # pl.plot(frqx[sortedPeakIdx], np.log(frqy[sortedPeakIdx]**2), 'ro', markersize=8)
+    # pl.show()
+    # print frqx[sortedPeakIdx], sortedPeakIdx
+    hypinit[Q + np.arange(0,Q*D)] = np.log(frqx[sortedPeakIdx])
+
+    # Assign hyperparam length scales (sigma's)
+    for i in range(0,D):
+        d2 = np.sqrt(sq_dist(x[:,i].T))
+        if n > 1:
+            d2[d2 == 0] = d2[0,1]
+        else:
+            d2[d2 == 0] = 1
+        maxshift = np.max(np.max(d2))
+        s[i,:] = 1./np.abs(maxshift*np.random.ranf((1,Q)))
+    hypinit[Q + Q*D + np.arange(0,Q*D)] = np.log(s[:]).T
+    
+    return hypinit
+
 
 def initHyperParams(Q, x, y, sn):
     """
@@ -62,6 +115,7 @@ def initHyperParams(Q, x, y, sn):
     hypinit[Q + np.arange(0,Q*D)] = np.log(m[:]).T
     hypinit[Q + Q*D + np.arange(0,Q*D)] = np.log(s[:]).T
     return hypinit
+
 
 class GaussianProcess(object):
     def __init__(self, xTrain=None, yTrain=None, xTest=None, yTest=None, hyp=None,

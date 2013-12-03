@@ -16,7 +16,9 @@ xt = np.matrix(np.arange(0,2,Ts)).T
 y = np.matrix(f(x).ravel()).T
 dy = 0.5 + 1.e-1 * np.random.random(y.shape)
 noise = np.random.normal(0, dy)
-#y += noise
+y += noise
+
+#sio.savemat('sindat.mat', {'xtrain':x, 'xtest':xt, 'ytrain':y, 'ytest':f(xt)})
 
 # Number of Gaussians in the mixture model
 Q = 4
@@ -42,12 +44,13 @@ sn = 1.0
 
 # Random starts
 for itr in range(nItr):
-    initArgs = {'Q':Q,'x':x,'y':y}
+    initArgs = {'Q':Q,'x':x,'y':y, 'samplingFreq':150, 'nPeaks':4}
     initArgs['sn'] = None if fixHypLik else sn
     # Initialize hyperparams
 #    hypGuess = gp.initHyperParams(**initArgs)
-    w = np.std(y)/Q
-    hypGuess = np.log(np.array([w, 10., 0.5, w, 13., 0.5]*2+[sn]))
+    hypGuess = gp.initHyperParamsFourier(**initArgs)
+#    w = np.std(y)/Q
+#    hypGuess = np.log(np.array([w, 10., 0.5, w, 13., 0.5]*2+[sn]))
     # Optimize the guessed hyperparams
     hypGP = gp.GaussianProcess(hyp=hypGuess, inf=infFunc, mean=meanFunc,
                                cov=covFunc, lik=likFunc, hypLik=np.log(sn),
@@ -78,6 +81,7 @@ optOutput = sopt.minimize(fun=hypGP.train, x0=hypInit, method=l2Optimizer,
 hypTrained = optOutput.x
 newNegLogML = optOutput.fun
 print "Final hyperparams likelihood: ", negLogML
+
 print "Noise parameter: ", np.exp(hypTrained[-1]) if not fixHypLik else sn
 print "Reoptimized: ", newNegLogML
 if fixHypLik:
