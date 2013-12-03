@@ -24,3 +24,11 @@ where t = x-x', q = ith out of Q Gaussians in the mixture, p = jth out of P dime
 This form allows the SM kernel to approximate any kernel with enough Gaussians in the mixture and to capture any consistent pattern in the data. An example problem using the airline data from [1] is given here.
 
 Code has been tested with Python 2.7 only. Requires SciPy, NumPy, and matplotlib.
+
+--------
+
+## Usage
+
+GaussianProcess.py includes a class and some helper functions (hyperparameter initialization, calculating distance matrix, etc.) completely specifying a Gaussian process with inference, likelihood, mean, and kernel functions.
+
+To instantiate a Gaussian process, one needs to simply import GaussianProcess.py and specify a hyperparameter array, or use a provided initialization function. Using the training function, one can find optimal hyperparameters that minimize the negative log marginal likelihood. See the included test scripts for examples (they should run out-of-box).
