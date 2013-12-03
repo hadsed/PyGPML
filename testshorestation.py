@@ -5,21 +5,22 @@ from scipy import optimize as sopt
 
 import GaussianProcess as gp
 
-data = sio.loadmat('data/CO2data.mat')
+# data = sio.loadmat('data/shorestationdata.mat')
+data = sio.loadmat('data/shorestationdatasmooth.mat')
 
 x = np.matrix(data['xtrain'])
 y = np.matrix(data['ytrain'])
 xt = np.matrix(data['xtest'])
 yt = np.matrix(data['ytest'])
 # To get interpolation too
-#xt = np.concatenate((x,xt))
-#yt = np.concatenate((y,yt))
+xt = np.concatenate((x,xt))
+yt = np.concatenate((y,yt))
 
 skipSM = False
 Q = 10
 
 negLogML = np.inf
-nItr = 1
+nItr = 10
 
 # Define core functions
 likFunc = 'likGauss'
@@ -29,14 +30,14 @@ covFunc = 'covSM'
 
 l1Optimizer = 'COBYLA'
 l1Options = {'maxiter':100 if not skipSM else 1}
-l2Optimizer = 'L-BFGS-B'
-#l2Optimizer = 'COBYLA'
+#l2Optimizer = 'L-BFGS-B'
+l2Optimizer = 'COBYLA'
 l2Options = {'maxiter':100 if not skipSM else 1}
 
 # Noise std. deviation
 fixHypLik = False
-sn = 1.0
-initArgs = {'Q':Q, 'x':x, 'y':y, 'samplingFreq':1, 'nPeaks':4}
+sn = 1.
+initArgs = {'Q':Q, 'x':x, 'y':y, 'samplingFreq':1, 'nPeaks':6}
 initArgs['sn'] = None if fixHypLik else sn
 
 # Random starts
@@ -86,8 +87,8 @@ sigma2 = prediction['ys2']
 
 # Plot the stuff
 pl.plot(x, y, 'b', label=u'Training Data')
-pl.plot(xt, yt, 'r', label=u'Test Data')
-pl.plot(xt, mean, 'k', label=u'SM Prediction')
+pl.plot(xt, yt, 'k', label=u'Test Data')
+pl.plot(xt, mean, 'r', label=u'SM Prediction')
 
 # Now try to do a vanilla isotropic Gaussian kernel
 seOptimizer = 'COBYLA'

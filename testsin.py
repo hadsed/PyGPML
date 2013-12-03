@@ -5,8 +5,7 @@ import GaussianProcess as gp
 
 from scipy import io as sio
 
-# Generate some test data                                                           
-#f = lambda x: 15*np.sin(np.power(x,2)) + np.power(x,2)
+# Generate some test data
 ff = 10
 f = lambda x: np.sin(2*np.pi*ff*x) + np.sin(2*np.pi*(ff+3)*x)/3.
 Fs = 150.0
@@ -17,8 +16,6 @@ y = np.matrix(f(x).ravel()).T
 dy = 0.5 + 1.e-1 * np.random.random(y.shape)
 noise = np.random.normal(0, dy)
 y += noise
-
-#sio.savemat('sindat.mat', {'xtrain':x, 'xtest':xt, 'ytrain':y, 'ytest':f(xt)})
 
 # Number of Gaussians in the mixture model
 Q = 4

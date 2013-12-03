@@ -63,11 +63,6 @@ def initHyperParamsFourier(Q, x, y, sn, samplingFreq, nPeaks):
     # Find specified number (nPeaks) largest peaks
     sortedIdx = frqy[peakIdx].argsort()[::-1][:nPeaks]
     sortedPeakIdx = peakIdx[sortedIdx]
-    # import pylab as pl
-    # pl.plot(frqx,np.log(frqy**2), 'bx-', markersize=8)
-    # pl.plot(frqx[sortedPeakIdx], np.log(frqy[sortedPeakIdx]**2), 'ro', markersize=8)
-    # pl.show()
-    # print frqx[sortedPeakIdx], sortedPeakIdx
     hypinit[Q + np.arange(0,Q*D)] = np.log(frqx[sortedPeakIdx])
 
     # Assign hyperparam length scales (sigma's)
