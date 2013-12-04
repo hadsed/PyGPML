@@ -19,7 +19,7 @@ skipSM = False
 Q = 10
 
 negLogML = np.inf
-nItr = 1
+nItr = 10
 
 # Define core functions
 likFunc = 'likGauss'
@@ -36,7 +36,7 @@ l2Options = {'maxiter':100 if not skipSM else 1}
 # Noise std. deviation
 fixHypLik = False
 sn = 1.0
-initArgs = {'Q':Q, 'x':x, 'y':y, 'samplingFreq':1, 'nPeaks':4}
+initArgs = {'Q':Q, 'x':x, 'y':y, 'samplingFreq':1, 'nPeaks':Q}
 initArgs['sn'] = None if fixHypLik else sn
 
 # Random starts
@@ -88,6 +88,14 @@ sigma2 = prediction['ys2']
 pl.plot(x, y, 'b', label=u'Training Data')
 pl.plot(xt, yt, 'r', label=u'Test Data')
 pl.plot(xt, mean, 'k', label=u'SM Prediction')
+sigma = np.power(sigma2, 0.5)
+fillx = np.concatenate([np.array(xt.ravel()).ravel(), 
+                        np.array(xt.ravel()).ravel()[::-1]])
+filly = np.concatenate([(np.array(mean.ravel()).ravel() - 1.9600 * 
+                         np.array(sigma.ravel()).ravel()),
+                        (np.array(mean.ravel()).ravel() + 1.9600 * 
+                         np.array(sigma.ravel()).ravel())[::-1]])
+pl.fill(fillx, filly, alpha=.5, fc='0.5', ec='None', label='95% confidence interval')
 
 # Now try to do a vanilla isotropic Gaussian kernel
 seOptimizer = 'COBYLA'
@@ -111,4 +119,11 @@ print "Noise parameter: ", optSE.x[-1]
 print "SE hyperparams: ", optSE.x[0:-1]
 
 pl.plot(xt, seMean, 'g', label=u'SE Prediction')
+fillx = np.concatenate([np.array(xt.ravel()).ravel(), 
+                        np.array(xt.ravel()).ravel()[::-1]])
+filly = np.concatenate([(np.array(seMean.ravel()).ravel() - 1.9600 * 
+                         np.array(seSig2.ravel()).ravel()),
+                        (np.array(seMean.ravel()).ravel() + 1.9600 * 
+                         np.array(seSig2.ravel()).ravel())[::-1]])
+pl.fill(fillx, filly, alpha=.5, fc='b', ec='None', label='95% confidence interval')
 pl.show()

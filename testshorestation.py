@@ -5,16 +5,16 @@ from scipy import optimize as sopt
 
 import GaussianProcess as gp
 
-# data = sio.loadmat('data/shorestationdata.mat')
-data = sio.loadmat('data/shorestationdatasmooth.mat')
+data = sio.loadmat('data/shorestationdata.mat')
+# data = sio.loadmat('data/shorestationdatasmooth.mat')
 
 x = np.matrix(data['xtrain'])
 y = np.matrix(data['ytrain'])
 xt = np.matrix(data['xtest'])
 yt = np.matrix(data['ytest'])
 # To get interpolation too
-xt = np.concatenate((x,xt))
-yt = np.concatenate((y,yt))
+# xt = np.concatenate((x,xt))
+# yt = np.concatenate((y,yt))
 
 skipSM = False
 Q = 10
@@ -36,8 +36,8 @@ l2Options = {'maxiter':100 if not skipSM else 1}
 
 # Noise std. deviation
 fixHypLik = False
-sn = 1.
-initArgs = {'Q':Q, 'x':x, 'y':y, 'samplingFreq':1, 'nPeaks':6}
+sn = 1.0
+initArgs = {'Q':Q, 'x':x, 'y':y, 'samplingFreq':1, 'nPeaks':Q}
 initArgs['sn'] = None if fixHypLik else sn
 
 # Random starts
@@ -80,7 +80,6 @@ print hypTrained[0:-1].reshape(3,10)
 fittedGP = gp.GaussianProcess(hyp=hypTrained, inf=infFunc, mean=meanFunc, 
                               cov=covFunc, lik=likFunc, hypLik=np.log(sn), 
                               xTrain=x, yTrain=y, xTest=xt)
-
 prediction = fittedGP.predict()
 mean = prediction['ymu']
 sigma2 = prediction['ys2']
@@ -112,4 +111,18 @@ print "Noise parameter: ", optSE.x[-1]
 print "SE hyperparams: ", optSE.x[0:-1]
 
 pl.plot(xt, seMean, 'g', label=u'SE Prediction')
+fillx = np.concatenate([np.array(xt.ravel()).ravel(), 
+                        np.array(xt.ravel()).ravel()[::-1]])
+filly = np.concatenate([(np.array(mean.ravel()).ravel() - 1.9600 * 
+                         np.array(sigma2.ravel()).ravel()),
+                        (np.array(mean.ravel()).ravel() + 1.9600 * 
+                         np.array(sigma2.ravel()).ravel())[::-1]])
+pl.fill(fillx, filly, alpha=.5, fc='0.5', ec='None', label='95% confidence interval')
+fillx = np.concatenate([np.array(xt.ravel()).ravel(), 
+                        np.array(xt.ravel()).ravel()[::-1]])
+filly = np.concatenate([(np.array(seMean.ravel()).ravel() - 1.9600 * 
+                         np.array(seSig2.ravel()).ravel()),
+                        (np.array(seMean.ravel()).ravel() + 1.9600 * 
+                         np.array(seSig2.ravel()).ravel())[::-1]])
+pl.fill(fillx, filly, alpha=.5, fc='b', ec='None', label='95% confidence interval')
 pl.show()
