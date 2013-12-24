@@ -32,9 +32,11 @@ def sq_dist(A, B=None):
     C = C.clip(min=0)
     return C
 
-def initHyperParamsFourier(Q, x, y, sn, samplingFreq, nPeaks):
+def initHyperParamsFourier(Q, x, y, sn, samplingFreq, nPeaks, relMaxOrder=2):
     """
     """
+    x = np.atleast_2d(x)
+    y = np.atleast_2d(y)
     n, D = x.shape
     w = np.zeros(Q)
     m = np.zeros((D,Q))
@@ -59,7 +61,14 @@ def initHyperParamsFourier(Q, x, y, sn, samplingFreq, nPeaks):
     frqy = np.fft.fft(signal)/n
     frqy = abs(frqy[range(n/2)])
     # Find the peaks in the frequency spectrum
-    peakIdx = spsig.argrelmax(np.log(frqy**2), order=2)[0]
+    peakIdx = np.array([])
+    while not peakIdx.any() and relMaxOrder > 0:
+        peakIdx = spsig.argrelmax(np.log(frqy**2), order=relMaxOrder)[0]
+        relMaxOrder -= 1
+    if not peakIdx.any():
+        raise ValueError("Data doesn't have any detectable peaks in Fourier space. "
+                         "Switching to a different kernel besides the spectral "
+                         "mixture is recommended.")
     # Find specified number (nPeaks) largest peaks
     sortedIdx = frqy[peakIdx].argsort()[::-1][:nPeaks]
     sortedPeakIdx = peakIdx[sortedIdx]
@@ -82,6 +91,8 @@ def initHyperParamsFourier(Q, x, y, sn, samplingFreq, nPeaks):
 def initHyperParams(Q, x, y, sn):
     """
     """
+    x = np.atleast_2d(x)
+    y = np.atleast_2d(y)
     n, D = x.shape
     w = np.zeros(Q)
     m = np.zeros((D,Q))
@@ -116,10 +127,10 @@ class GaussianProcess(object):
     def __init__(self, xTrain=None, yTrain=None, xTest=None, yTest=None, hyp=None,
                  fixHypLik=False, hypLik=None, cov='covSM', inf='infExact', 
                  lik='likGauss', mean='meanZero'):
-        self.xt = xTrain
-        self.yt = yTrain
-        self.xs = xTest
-        self.ys = yTest
+        self.xt = np.atleast_2d(xTrain)
+        self.yt = np.atleast_2d(yTrain)
+        self.xs = np.atleast_2d(xTest) if xTest is not None else None
+        self.ys = np.atleast_2d(yTest) if yTest is not None else None
         self.cov = eval('self._' + cov)
         self.inf = eval('self._' + inf)
         self.lik = eval('self._' + lik)
@@ -127,7 +138,7 @@ class GaussianProcess(object):
         self.hyp = hyp
         self.hypLik = hypLik
         self.fixHypLik = fixHypLik
-        
+
 
     def train(self, hyp):
         """
@@ -208,7 +219,7 @@ class GaussianProcess(object):
 
             # Iterate batch
             nProcessed = rng[-1] + 1
-            print("Points processed (prediction mode): ", nProcessed, nPoints)
+#            print("Points processed (prediction mode): ", nProcessed, nPoints)
         
         test = False
         if test:
