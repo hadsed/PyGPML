@@ -131,14 +131,27 @@ class GaussianProcess(object):
         self.yt = np.atleast_2d(yTrain)
         self.xs = np.atleast_2d(xTest) if xTest is not None else None
         self.ys = np.atleast_2d(yTest) if yTest is not None else None
-        self.cov = eval('self._' + cov)
-        self.inf = eval('self._' + inf)
-        self.lik = eval('self._' + lik)
-        self.mean = eval('self._' + mean)
+        # Check if we're being given a custom functions or a string
+        # which corresponds to a built-in function
+        if isinstance(cov, basestring):
+            self.cov = eval('self._' + cov)
+        else:
+            self.cov = cov
+        if isinstance(inf, basestring):
+            self.inf = eval('self._' + inf)
+        else:
+            self.inf = inf
+        if isinstance(lik, basestring):
+            self.lik = eval('self._' + lik)
+        else:
+            self.lik = lik
+        if isinstance(mean, basestring):
+            self.mean = eval('self._' + mean)
+        else:
+            self.mean = mean
         self.hyp = hyp
         self.hypLik = hypLik
         self.fixHypLik = fixHypLik
-
 
     def train(self, hyp):
         """
