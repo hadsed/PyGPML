@@ -1,9 +1,12 @@
 import numpy as np
 from scipy import optimize as sopt
 import pylab as pl
+
+# Adds the GP code directory to the system path
+# so we can call the library from this subdir.
+import addpath
 import gaussian_process as gp
 
-from scipy import io as sio
 
 # Generate some test data
 ff = 10

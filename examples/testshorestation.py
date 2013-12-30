@@ -3,6 +3,9 @@ import pylab as pl
 from scipy import io as sio
 from scipy import optimize as sopt
 
+# Adds the GP code directory to the system path
+# so we can call the library from this subdir.
+import addpath
 import gaussian_process as gp
 
 data = sio.loadmat('data/shorestationdata.mat')
