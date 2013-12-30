@@ -90,9 +90,11 @@ class GaussianProcess(object):
         # Loop through points
         while nProcessed < nPoints:
             rng = range(nProcessed, min(nProcessed+nBatch, nPoints))
-            Kdiag = self.cov(self.hyp, xs[rng,:], diag=True)
-            Koff = self.cov(self.hyp, x[ones,:], xs[rng,:], diag=False)
-            ms = self.mean(xs[rng,:])
+            xsrng = np.matrix(xs[rng,:])
+            xones = np.matrix(x[ones,:])
+            Kdiag = self.cov(self.hyp, xsrng, diag=True)
+            Koff = self.cov(self.hyp, xones, xsrng, diag=False)
+            ms = self.mean(xsrng)
             N = alpha.shape[1]
             # Conditional mean fs|f, GPML Eqs. (2.25), (2.27)
             Fmu = np.tile(ms, (1,N)) + Koff.T*alpha[ones,:]
