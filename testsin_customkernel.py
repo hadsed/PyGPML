@@ -2,7 +2,7 @@ import numpy as np
 from scipy import optimize as sopt
 from scipy import io as sio
 import pylab as pl
-import GaussianProcess as gp
+import gaussian_process as gp
 
 # Generate some test data
 ff = 10
@@ -16,12 +16,6 @@ dy = 0.5 + 1.e-1 * np.random.random(y.shape)
 noise = np.random.normal(0, dy)
 y += noise
 
-# Number of Gaussians in the mixture model
-Q = 4
-skipSM = False
-negLogML = np.inf
-nItr = 1
-
 def rqkernel(hyp, x=None, z=None, diag=False):
     """
     Implements a rational-quadratic kernel:
@@ -34,9 +28,9 @@ def rqkernel(hyp, x=None, z=None, diag=False):
         K = np.zeros((x.shape[0],1))
     else:
         if x is z:
-            K = gp.sq_dist(x.T/lamb**2)
+            K = gp.core.sq_dist(x.T/lamb**2)
         else:
-            K = gp.sq_dist(x.T/lamb**2, z.T/lamb**2)
+            K = gp.core.sq_dist(x.T/lamb**2, z.T/lamb**2)
     K = hscale**2 * np.power(1 + K/alpha, -alpha)
     return K
 
@@ -52,24 +46,39 @@ def perkernel(hyp, x=None, z=None, diag=False):
         K = np.zeros((x.shape[0],1))
     else:
         if x is z:
-            K = gp.sq_dist(x.T)
+            K = gp.core.sq_dist(x.T)
         else:
-            K = gp.sq_dist(x.T, z.T)
+            K = gp.core.sq_dist(x.T, z.T)
     K = np.sqrt(K)  # need the absolute distance, not squared
     K = sigma**2 * np.exp(-2/ell**2 * np.power(np.sin(np.pi*K/per), 2))
     return K
 
+def wrapperkernel(hyp, x=None, z=None, diag=False):
+    """
+    This is a wrapper kernel that multiplies an RQ kernel
+    with a periodic one.
+    """
+    hyp1, hyp2, hyp3 = hyp[0:3], hyp[3:7], hyp[7:11]
+    Kper1 = perkernel(hyp1, x, z, diag)
+    Kper2 = perkernel(hyp1, x, z, diag)
+    Krq = rqkernel(hyp2, x, z, diag)
+    # You can also call the built-in kernels by doing
+    # Ksomething = gp.kernels.somekernel(**args)
+    return np.multiply(Kper1+Kper2, Krq)
+
+# Initialize some params
+negLogML = np.inf
+nItr = 1
 # Define core functions
 likFunc = 'likGauss'
 meanFunc = 'meanZero'
 infFunc = 'infExact'
 # covFunc = rqkernel
-covFunc = perkernel
-
+covFunc = wrapperkernel
 l1Optimizer = 'COBYLA'
-l1Options = {'maxiter':100 if not skipSM else 1}
-l2Optimizer = 'CG'
-l2Options = {'maxiter':100 if not skipSM else 1}
+l1Options = {'maxiter':100}
+l2Optimizer = 'L-BFGS-B'
+l2Options = {'maxiter':100}
 
 # Noise std. deviation
 fixHypLik = False
@@ -77,11 +86,12 @@ sn = 1.0
 
 # Random starts
 for itr in range(nItr):
-    initArgs = {'Q':Q,'x':x,'y':y, 'samplingFreq':150, 'nPeaks':4}
-    initArgs['sn'] = None if fixHypLik else sn
     # Initialize hyperparams
-    # hypGuess = np.log([0.1, 0.1, 0.1])  # for the rqkernel
-    hypGuess = np.log([0.05, 0.1, 1.0])
+    # hypGuess = np.log([0.1, 0.1, 0.1])  # for the RQ kernel
+    # hypGuess = np.log([0.05, 0.1, 1.0])  # for the periodic kernel
+    hypGuess = np.log([0.05, 0.1, 1.0, 
+                       0.05, 0.1, 1.0, 
+                       0.1, 0.1, 0.1])  # for the periodic-RQ kernel
     # Optimize the guessed hyperparams
     hypGP = gp.GaussianProcess(hyp=hypGuess, inf=infFunc, mean=meanFunc,
                                cov=covFunc, lik=likFunc, hypLik=np.log(sn),

@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import optimize as sopt
 import pylab as pl
-import GaussianProcess as gp
+import gaussian_process as gp
 
 from scipy import io as sio
 
@@ -27,7 +27,7 @@ nItr = 1
 likFunc = 'likGauss'
 meanFunc = 'meanZero'
 infFunc = 'infExact'
-covFunc = 'covSM'
+covFunc = 'spectral_mixture'
 
 l1Optimizer = 'COBYLA'
 l1Options = {'maxiter':100 if not skipSM else 1}
@@ -44,10 +44,7 @@ for itr in range(nItr):
     initArgs = {'Q':Q,'x':x,'y':y, 'samplingFreq':150, 'nPeaks':4}
     initArgs['sn'] = None if fixHypLik else sn
     # Initialize hyperparams
-#    hypGuess = gp.initHyperParams(**initArgs)
-    hypGuess = gp.initHyperParamsFourier(**initArgs)
-#    w = np.std(y)/Q
-#    hypGuess = np.log(np.array([w, 10., 0.5, w, 13., 0.5]*2+[sn]))
+    hypGuess = gp.core.initSMParamsFourier(**initArgs)
     # Optimize the guessed hyperparams
     hypGP = gp.GaussianProcess(hyp=hypGuess, inf=infFunc, mean=meanFunc,
                                cov=covFunc, lik=likFunc, hypLik=np.log(sn),
@@ -82,9 +79,9 @@ print "Final hyperparams likelihood: ", negLogML
 print "Noise parameter: ", np.exp(hypTrained[-1]) if not fixHypLik else sn
 print "Reoptimized: ", newNegLogML
 if fixHypLik:
-    print hypTrained.reshape(3,Q)
+    print np.exp(hypTrained.reshape(3,Q))
 else:
-    print hypTrained[0:-1].reshape(3,Q)
+    print np.exp(hypTrained[0:-1].reshape(3,Q))
 
 # Fit the GP
 fittedGP = gp.GaussianProcess(hyp=hypTrained, inf=infFunc, mean=meanFunc,

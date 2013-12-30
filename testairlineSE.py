@@ -3,9 +3,9 @@ import pylab as pl
 from scipy import io as sio
 from scipy import optimize as sopt
 
-import GaussianProcess as gp
+import gaussian_process as gp
 
-data = sio.loadmat('airlinedata.mat')
+data = sio.loadmat('data/airlinedata.mat')
 
 x = np.matrix(data['xtrain'])
 y = np.matrix(data['ytrain'])
@@ -17,22 +17,18 @@ yt = np.concatenate((y,yt))
 likFunc = 'likGauss'
 meanFunc = 'meanZero'
 infFunc = 'infExact'
-covFunc = 'covSE'
-
+covFunc = 'radial_basis'
 # Now try to do a vanilla isotropic Gaussian kernel
 seOptimizer = 'COBYLA'
 sn = 0.1
-hypSEInit = np.log([40., np.std(y), sn])
+hypSEInit = np.log([np.std(y), 40., sn])
 seGP = gp.GaussianProcess(hyp=hypSEInit, inf=infFunc, mean=meanFunc, 
                           cov=covFunc, lik=likFunc, hypLik=np.log(sn), 
                           xTrain=x, yTrain=y)
-#seGP.train(hypSEInit)
 optSE = sopt.minimize(fun=seGP.train, x0=hypSEInit, method=seOptimizer,
                       options={'maxiter':1000})
 optSEx = optSE.x
 optSEfun = optSE.fun
-#optSEx = [ 5.0796, 5.9429 ]
-#optSEfun = seGP.train(optSEx)
 seFitted = gp.GaussianProcess(hyp=optSEx, inf=infFunc, mean=meanFunc, 
                               cov=covFunc, lik=likFunc, hypLik=np.log(sn), 
                               xTrain=x, yTrain=y, xTest=xt)
@@ -44,8 +40,8 @@ print "Optimized SE likelihood: ", optSEfun
 print "SE hyperparams: ", optSEx
 
 # Plot the stuff
-pl.plot(x, y, 'b', label=u'Training Data')
 pl.plot(xt, yt, 'r', label=u'Test Data')
+pl.plot(x, y, 'b', label=u'Training Data')
 pl.plot(xt, seMean, 'g', label=u'SE Prediction')
 sigma = np.power(seSig2, 0.5)
 fillx = np.concatenate([np.array(xt.ravel()).ravel(), 

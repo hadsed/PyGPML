@@ -3,9 +3,9 @@ import pylab as pl
 from scipy import io as sio
 from scipy import optimize as sopt
 
-import GaussianProcess as gp
+import gaussian_process as gp
 
-data = sio.loadmat('airlinedata.mat')
+data = sio.loadmat('data/airlinedata.mat')
 
 x1 = np.matrix(data['xtrain'])
 x2 = np.matrix(data['xtrain'])
@@ -39,7 +39,7 @@ hypTrained = []
 likFunc = 'likGauss'
 meanFunc = 'meanZero'
 infFunc = 'infExact'
-covFunc = 'covSM'
+covFunc = 'spectral_mixture'
 
 l1Optimizer = 'COBYLA'
 l1Options = {'maxiter':100 if not skipSM else 1}
@@ -53,7 +53,7 @@ sn = 1
 # Random starts
 for itr in range(nItr):
     # Initialize hyperparams
-    hypGuess = gp.initHyperParams(Q,x,y,sn)
+    hypGuess = gp.core.initSMParams(Q,x,y,sn)
     # Optimize the guessed hyperparams
     hypGP = gp.GaussianProcess(hyp=hypGuess, inf=infFunc, mean=meanFunc, 
                                cov=covFunc, lik=likFunc, hypLik=np.log(sn),
@@ -105,35 +105,3 @@ filly = np.concatenate([(np.array(mean.ravel()).ravel() - 1.9600 *
                         (np.array(mean.ravel()).ravel() + 1.9600 * 
                          np.array(sigma.ravel()).ravel())[::-1]])
 pl.fill(fillx, filly, alpha=.5, fc='0.5', ec='None', label='95% confidence interval')
-
-# Now try to do a vanilla isotropic Gaussian kernel
-seOptimizer = 'COBYLA'
-covFunc = 'covSE'
-sn = 0.1
-hypSEInit = np.log( [40., np.std(y)]*x.shape[1] + [sn] )
-seGP = gp.GaussianProcess(hyp=hypSEInit, inf=infFunc, mean=meanFunc, 
-                          cov=covFunc, lik=likFunc, hypLik=np.log(sn), 
-                          xTrain=x, yTrain=y)
-optSE = sopt.minimize(fun=seGP.train, x0=hypSEInit, method=seOptimizer,
-                      options={'maxiter':1000})
-seFitted = gp.GaussianProcess(hyp=optSE.x, inf=infFunc, mean=meanFunc, 
-                              cov=covFunc, lik=likFunc, hypLik=np.log(sn), 
-                              xTrain=x, yTrain=y, xTest=xt)
-sePred = seFitted.predict()
-seMean = sePred['ymu']
-seSig2 = sePred['ys2']
-
-print "Optimized SE likelihood: ", optSE.fun
-print "Noise parameter: ", optSE.x[-1]
-print "SE hyperparams: ", optSE.x[0:-1]
-
-pl.plot(xt, seMean, 'g', label=u'SE Prediction')
-sigma = np.power(sigma2, 0.5)
-fillx = np.concatenate([np.array(xt.ravel()).ravel(), 
-                        np.array(xt.ravel()).ravel()[::-1]])
-filly = np.concatenate([(np.array(mean.ravel()).ravel() - 1.9600 * 
-                         np.array(sigma.ravel()).ravel()),
-                        (np.array(mean.ravel()).ravel() + 1.9600 * 
-                         np.array(sigma.ravel()).ravel())[::-1]])
-pl.fill(fillx, filly, alpha=.5, fc='b', ec='None', label='95% confidence interval')
-pl.show()

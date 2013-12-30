@@ -3,7 +3,7 @@ import pylab as pl
 from scipy import io as sio
 from scipy import optimize as sopt
 
-import GaussianProcess as gp
+import gaussian_process as gp
 
 data = sio.loadmat('data/shorestationdata.mat')
 # data = sio.loadmat('data/shorestationdatasmooth.mat')
@@ -26,7 +26,7 @@ nItr = 10
 likFunc = 'likGauss'
 meanFunc = 'meanZero'
 infFunc = 'infExact'
-covFunc = 'covSM'
+covFunc = 'spectral_mixture'
 
 l1Optimizer = 'COBYLA'
 l1Options = {'maxiter':100 if not skipSM else 1}
@@ -43,9 +43,7 @@ initArgs['sn'] = None if fixHypLik else sn
 # Random starts
 for itr in range(nItr):
     # Initialize hyperparams
-#    hypGuess = gp.initHyperParams(Q,x,y,sn)
-    hypGuess = gp.initHyperParamsFourier(**initArgs)
-
+    hypGuess = gp.core.initSMParamsFourier(**initArgs)
     # Optimize the guessed hyperparams
     hypGP = gp.GaussianProcess(hyp=hypGuess, inf=infFunc, mean=meanFunc, 
                                cov=covFunc, lik=likFunc, hypLik=np.log(sn),
@@ -91,9 +89,9 @@ pl.plot(xt, mean, 'r', label=u'SM Prediction')
 
 # Now try to do a vanilla isotropic Gaussian kernel
 seOptimizer = 'COBYLA'
-covFunc = 'covSE'
+covFunc = 'radial_basis'
 sn = 0.1
-hypSEInit = np.log([40., np.std(y), sn])
+hypSEInit = np.log([np.std(y), 40., sn])
 seGP = gp.GaussianProcess(hyp=hypSEInit, inf=infFunc, mean=meanFunc, 
                           cov=covFunc, lik=likFunc, hypLik=np.log(sn), 
                           xTrain=x, yTrain=y)
