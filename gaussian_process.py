@@ -13,6 +13,7 @@ import numpy as np
 from scipy import spatial as spatial
 from scipy import linalg as sln
 from scipy import signal as spsig
+from scipy import optimize as sopt
 
 # GP imports
 import core
@@ -24,13 +25,13 @@ import means
 class GaussianProcess(object):
     """
     """
-    def __init__(self, xTrain=None, yTrain=None, xTest=None, yTest=None, hyp=None,
+    def __init__(self, xtrain=None, ytrain=None, xtest=None, ytest=None, hyp=None,
                  fixHypLik=False, hypLik=None, cov='radial_basis', inf='exact', 
                  lik='gaussian', mean='zero'):
-        self.xt = np.atleast_2d(xTrain)
-        self.yt = np.atleast_2d(yTrain)
-        self.xs = np.atleast_2d(xTest) if xTest is not None else None
-        self.ys = np.atleast_2d(yTest) if yTest is not None else None
+        self.xtrain = np.atleast_2d(xtrain)
+        self.ytrain = np.atleast_2d(ytrain)
+        self.xtest = np.atleast_2d(xtest) if xtest is not None else None
+        self.ytest = np.atleast_2d(ytest) if ytest is not None else None
         # Check if we're being given a custom functions or a string
         # which corresponds to a built-in function
         if isinstance(cov, basestring):
@@ -52,12 +53,19 @@ class GaussianProcess(object):
         self.hyp = hyp
         self.hypLik = hypLik
         self.fixHypLik = fixHypLik
+        self.nlml = np.inf
 
-    def train(self, hyp):
+    def train(self, method, options, write=True):
         """
-        Return the negative log-likelihood of Z. This routine
-        is used for optimization.
+        Train the Gaussian process model using @method, where
+        @options are the optimization routine arguments and @hyp
+        is the initialization. Optimization is done over the negative
+        log marginal likelihood (see GPML section 2.7.1).
+
+        @write is a flag that tells whether to write the optimized
+        hyperparameters and likelihood to the object attributes.
         """
+        hyp = self.hyp
         # Last parameter is always the noise variable
         if self.fixHypLik:
             hypLik = hyp[-1]
@@ -65,16 +73,32 @@ class GaussianProcess(object):
             self.hypLik = hypLik
         else:
             hypLik = self.hypLik
-        return self.inf(self.cov, self.mean, hyp, self.xt, self.yt, 
-                        False, hypLik)
+        # A wrapper function (the optimized variable needs to be first)
+        def infwrapper(hyp, cov, mean, xt, yt, p, hyplik):
+            return self.inf(cov, mean, hyp, xt, yt, p, hyplik)
+        # Do the actual optimization
+        optparams = sopt.minimize(fun=infwrapper,
+                                  args=(self.cov, self.mean, self.xtrain,
+                                        self.ytrain, False, hypLik),
+                                  x0=hyp,
+                                  method=method,
+                                  options=options)
+        # Record these results in the relevant attributes
+        if write:
+            self.hyp = optparams.x
+            self.nlml = optparams.fun
+        # Just return the optimized hyperparams and log-likelihood
+        return (optparams.x, optparams.fun)
 
     def predict(self):
-        x = self.xt
-        xs = self.xs
+        """
+        """
+        x = self.xtrain
+        xs = self.xtest
         hyp = self.hyp
         hypLik = self.hypLik
         alpha, L, sW = self.inf(self.cov, self.mean, self.hyp, 
-                                self.xt, self.yt, pred=True)
+                                self.xtrain, self.ytrain, pred=True)
         ones = np.arange(alpha.shape[0], dtype=int) # Well, in MATLAB it's all ones
         # If for some reason L isn't provided
         if L is None:
@@ -122,7 +146,7 @@ class GaussianProcess(object):
             # In case of sampling (?)
             Fs2 = np.matrix(np.tile(fs2[rng], (1,N)))
             # 
-            if self.ys is None:
+            if self.ytest is None:
                 Lp, Ymu, Ys2 = self.lik(hyp, [], Fmu, Fs2, hypLik)
             else:
                 Ys = np.tile(ys[rng], (1,N))
@@ -141,11 +165,11 @@ class GaussianProcess(object):
         #         'ys2': Ys2,
         #         'fmu': Fmu,
         #         'fs2': Fs2,
-        #         'lp': None if self.ys is None else Lp,
+        #         'lp': None if self.ytest is None else Lp,
         #         'post': [alpha, L, sW] }
         return {'ymu': ymu,
                 'ys2': ys2,
                 'fmu': fmu,
                 'fs2': fs2,
-                'lp': None if self.ys is None else lp,
+                'lp': None if self.ytest is None else lp,
                 'post': [alpha, L, sW] }

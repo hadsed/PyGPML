@@ -23,6 +23,7 @@ skipSM = False
 Q = 10
 
 negLogML = np.inf
+hypInit = None
 nItr = 10
 
 # Define core functions
@@ -40,48 +41,50 @@ l2Options = {'maxiter':100 if not skipSM else 1}
 # Noise std. deviation
 fixHypLik = False
 sn = 1.0
-initArgs = {'Q':Q, 'x':x, 'y':y, 'samplingFreq':1, 'nPeaks':Q}
-initArgs['sn'] = None if fixHypLik else sn
 
+# Initialize hyperparams
+initArgs = {'Q':Q,'x':x,'y':y, 'samplingFreq':1, 'nPeaks':Q}
+initArgs['sn'] = None if fixHypLik else sn
+hypGuess = gp.core.initSMParamsFourier(**initArgs)
+# Initialize GP object
+hypGP = gp.GaussianProcess(hyp=hypGuess, inf=infFunc, mean=meanFunc,
+                           cov=covFunc, lik=likFunc, hypLik=np.log(sn),
+                           fixHypLik=fixHypLik, xtrain=x, ytrain=y, xtest=xt)
 # Random starts
 for itr in range(nItr):
-    # Initialize hyperparams
+    # Start over
     hypGuess = gp.core.initSMParamsFourier(**initArgs)
+    hypGP.hyp = hypGuess
     # Optimize the guessed hyperparams
-    hypGP = gp.GaussianProcess(hyp=hypGuess, inf=infFunc, mean=meanFunc, 
-                               cov=covFunc, lik=likFunc, hypLik=np.log(sn),
-                               xTrain=x, yTrain=y)
     try:
-        optOutput = sopt.minimize(fun=hypGP.train, x0=hypGuess, method=l1Optimizer,
-                                  options=l1Options)
-    except:
+        hypGP.train(l1Optimizer, l1Options)
+    except Exception as e:
         print "Iteration: ", itr, "FAILED"
+        print "\t", e
+        import traceback
+        traceback.print_exc()
         continue
-    hypTrained = optOutput.x
-    newNegLogML = optOutput.fun
-    # Update
-    if newNegLogML < negLogML:
-        hypInit = hypTrained
-        negLogML = newNegLogML
-    print "Iteration: ", itr, newNegLogML
-print "Final", hypInit
-# Optimize the best hyperparams even more
-hypGP = gp.GaussianProcess(hyp=hypTrained, inf=infFunc, mean=meanFunc, cov=covFunc,
-                           lik=likFunc, hypLik=np.log(sn), xTrain=x, yTrain=y)
-optOutput = sopt.minimize(fun=hypGP.train, x0=hypInit, method=l2Optimizer,
-                          options=l2Options)
-hypTrained = optOutput.x
-newNegLogML = optOutput.fun
-print "Final hyperparams likelihood: ", negLogML
-print "Noise parameter: ", hypTrained[-1]
-print "Reoptimized: ", newNegLogML
-print hypTrained[0:-1].reshape(3,10)
+    # Best random initialization
+    if hypGP.nlml < negLogML:
+        hypInit = hypGP.hyp
+        negLogML = hypGP.nlml
+    print "Iteration: ", itr, hypGP.nlml
 
-# Fit the GP
-fittedGP = gp.GaussianProcess(hyp=hypTrained, inf=infFunc, mean=meanFunc, 
-                              cov=covFunc, lik=likFunc, hypLik=np.log(sn), 
-                              xTrain=x, yTrain=y, xTest=xt)
-prediction = fittedGP.predict()
+# Give the GP object the proper params
+hypGP.hyp = hypInit
+hypGP.nlml = negLogML
+# Optimize the best hyperparams even more
+hypGP.hyp, hypGP.nlml = hypGP.train(method=l2Optimizer, options=l2Options)
+print "Final hyperparams likelihood: ", negLogML
+print "Noise parameter: ", np.exp(hypGP.hyp[-1]) if not fixHypLik else sn
+print "Reoptimized: ", hypGP.nlml
+if fixHypLik:
+    print np.exp(hypGP.hyp.reshape(3,Q))
+else:
+    print np.exp(hypGP.hyp[0:-1].reshape(3,Q))
+
+# Do the extrapolation
+prediction = hypGP.predict()
 mean = prediction['ymu']
 sigma2 = prediction['ys2']
 
@@ -89,41 +92,12 @@ sigma2 = prediction['ys2']
 pl.plot(x, y, 'b', label=u'Training Data')
 pl.plot(xt, yt, 'k', label=u'Test Data')
 pl.plot(xt, mean, 'r', label=u'SM Prediction')
-
-# Now try to do a vanilla isotropic Gaussian kernel
-seOptimizer = 'COBYLA'
-covFunc = 'radial_basis'
-sn = 0.1
-hypSEInit = np.log([np.std(y), 40., sn])
-seGP = gp.GaussianProcess(hyp=hypSEInit, inf=infFunc, mean=meanFunc, 
-                          cov=covFunc, lik=likFunc, hypLik=np.log(sn), 
-                          xTrain=x, yTrain=y)
-optSE = sopt.minimize(fun=seGP.train, x0=hypSEInit, method=seOptimizer,
-                      options={'maxiter':1000})
-seFitted = gp.GaussianProcess(hyp=optSE.x, inf=infFunc, mean=meanFunc, 
-                              cov=covFunc, lik=likFunc, hypLik=np.log(sn), 
-                              xTrain=x, yTrain=y, xTest=xt)
-sePred = seFitted.predict()
-seMean = sePred['ymu']
-seSig2 = sePred['ys2']
-
-print "Optimized SE likelihood: ", optSE.fun
-print "Noise parameter: ", optSE.x[-1]
-print "SE hyperparams: ", optSE.x[0:-1]
-
-pl.plot(xt, seMean, 'g', label=u'SE Prediction')
 fillx = np.concatenate([np.array(xt.ravel()).ravel(), 
                         np.array(xt.ravel()).ravel()[::-1]])
 filly = np.concatenate([(np.array(mean.ravel()).ravel() - 1.9600 * 
                          np.array(sigma2.ravel()).ravel()),
                         (np.array(mean.ravel()).ravel() + 1.9600 * 
                          np.array(sigma2.ravel()).ravel())[::-1]])
-pl.fill(fillx, filly, alpha=.5, fc='0.5', ec='None', label='95% confidence interval')
-fillx = np.concatenate([np.array(xt.ravel()).ravel(), 
-                        np.array(xt.ravel()).ravel()[::-1]])
-filly = np.concatenate([(np.array(seMean.ravel()).ravel() - 1.9600 * 
-                         np.array(seSig2.ravel()).ravel()),
-                        (np.array(seMean.ravel()).ravel() + 1.9600 * 
-                         np.array(seSig2.ravel()).ravel())[::-1]])
-pl.fill(fillx, filly, alpha=.5, fc='b', ec='None', label='95% confidence interval')
+pl.fill(fillx, filly, alpha=.5, fc='0.5', ec='None', 
+        label='95% confidence interval')
 pl.show()

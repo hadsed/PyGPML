@@ -88,55 +88,44 @@ l2Options = {'maxiter':100}
 fixHypLik = False
 sn = 1.0
 
+# Initialize hyperparams
+# hypGuess = np.log([0.1, 0.1, 0.1])  # for the RQ kernel
+# hypGuess = np.log([0.05, 0.1, 1.0])  # for the periodic kernel
+hypGuess = np.log([0.05, 0.1, 1.0, 
+                   0.05, 0.1, 1.0, 
+                   0.1, 0.1, 0.1])  # for the periodic-RQ kernel
+# Optimize the guessed hyperparams
+hypGP = gp.GaussianProcess(hyp=hypGuess, inf=infFunc, mean=meanFunc,
+                           cov=covFunc, lik=likFunc, hypLik=np.log(sn),
+                           fixHypLik=fixHypLik, xtrain=x, ytrain=y, xtest=xt)
 # Random starts
 for itr in range(nItr):
-    # Initialize hyperparams
-    # hypGuess = np.log([0.1, 0.1, 0.1])  # for the RQ kernel
-    # hypGuess = np.log([0.05, 0.1, 1.0])  # for the periodic kernel
-    hypGuess = np.log([0.05, 0.1, 1.0, 
-                       0.05, 0.1, 1.0, 
-                       0.1, 0.1, 0.1])  # for the periodic-RQ kernel
+    # Start over
+    hypGP.hyp = hypGuess
     # Optimize the guessed hyperparams
-    hypGP = gp.GaussianProcess(hyp=hypGuess, inf=infFunc, mean=meanFunc,
-                               cov=covFunc, lik=likFunc, hypLik=np.log(sn),
-                               fixHypLik=fixHypLik, xTrain=x, yTrain=y)
     try:
-        optOutput = sopt.minimize(fun=hypGP.train, x0=hypGuess, method=l1Optimizer,
-                                  options=l1Options)
-    except Exception, e:
+        hypGP.train(l1Optimizer, l1Options)
+    except Exception as e:
         print "Iteration: ", itr, "FAILED"
-        print "\tError message:", e
+        print "\t", e
         continue
-    hypTrained = optOutput.x
-    newNegLogML = optOutput.fun
-    # Update
-    if newNegLogML < negLogML:
-        hypInit = hypTrained
-        negLogML = newNegLogML
-    print "Iteration: ", itr, newNegLogML
-
-# Best random initialization
-hypGP = gp.GaussianProcess(hyp=hypTrained, inf=infFunc, mean=meanFunc, cov=covFunc,
-                           lik=likFunc, hypLik=np.log(sn), fixHypLik=fixHypLik,
-                           xTrain=x, yTrain=y)
-
+    # Best random initialization
+    if hypGP.nlml < negLogML:
+        hypInit = hypGP.hyp
+        negLogML = hypGP.nlml
+    print "Iteration: ", itr, hypGP.nlml
+# Give the GP object the proper params
+hypGP.hyp = hypInit
+hypGP.nlml = negLogML
 # Optimize the best hyperparams even more
-optOutput = sopt.minimize(fun=hypGP.train, x0=hypInit, method=l2Optimizer,
-                          options=l2Options)
-
-hypTrained = optOutput.x
-newNegLogML = optOutput.fun
+hypGP.hyp, hypGP.nlml = hypGP.train(method=l2Optimizer, options=l2Options)
 print "Final hyperparams likelihood: ", negLogML
-print "Noise parameter: ", np.exp(hypTrained[-1]) if not fixHypLik else sn
-print "Reoptimized: ", newNegLogML
-print np.exp(hypTrained)
+print "Noise parameter: ", np.exp(hypGP.hyp[-1]) if not fixHypLik else sn
+print "Reoptimized: ", hypGP.nlml
+print np.exp(hypGP.hyp)
 
-# Fit the GP
-fittedGP = gp.GaussianProcess(hyp=hypTrained, inf=infFunc, mean=meanFunc,
-                              cov=covFunc, lik=likFunc, hypLik=np.log(sn),
-                              xTrain=x, yTrain=y, xTest=xt)
-
-prediction = fittedGP.predict()
+# Do the extrapolation
+prediction = hypGP.predict()
 mean = prediction['ymu']
 sigma2 = prediction['ys2']
 
