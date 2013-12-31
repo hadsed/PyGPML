@@ -25,9 +25,9 @@ negLogML = np.inf
 nItr = 10
 
 # Define core functions
-likFunc = 'likGauss'
-meanFunc = 'meanZero'
-infFunc = 'infExact'
+likFunc = 'gaussian'
+meanFunc = 'zero'
+infFunc = 'exact'
 covFunc = 'spectral_mixture'
 
 l1Optimizer = 'COBYLA'

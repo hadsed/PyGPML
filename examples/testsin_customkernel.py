@@ -74,9 +74,9 @@ def wrapperkernel(hyp, x=None, z=None, diag=False):
 negLogML = np.inf
 nItr = 1
 # Define core functions
-likFunc = 'likGauss'
-meanFunc = 'meanZero'
-infFunc = 'infExact'
+likFunc = 'gaussian'
+meanFunc = 'zero'
+infFunc = 'exact'
 # covFunc = rqkernel
 covFunc = wrapperkernel
 l1Optimizer = 'COBYLA'

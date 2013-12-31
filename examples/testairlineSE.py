@@ -17,9 +17,9 @@ yt = np.matrix(data['ytest'])
 xt = np.concatenate((x,xt))
 yt = np.concatenate((y,yt))
 # Define core functions
-likFunc = 'likGauss'
-meanFunc = 'meanZero'
-infFunc = 'infExact'
+likFunc = 'gaussian'
+meanFunc = 'zero'
+infFunc = 'exact'
 covFunc = 'radial_basis'
 # Now try to do a vanilla isotropic Gaussian kernel
 seOptimizer = 'COBYLA'

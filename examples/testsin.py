@@ -27,9 +27,9 @@ negLogML = np.inf
 nItr = 1
 
 # Define core functions
-likFunc = 'likGauss'
-meanFunc = 'meanZero'
-infFunc = 'infExact'
+likFunc = 'gaussian'
+meanFunc = 'zero'
+infFunc = 'exact'
 covFunc = 'spectral_mixture'
 
 l1Optimizer = 'COBYLA'
@@ -41,11 +41,11 @@ l2Options = {'maxiter':100 if not skipSM else 1}
 # Noise std. deviation
 fixHypLik = False
 sn = 1.0
+initArgs = {'Q':Q,'x':x,'y':y, 'samplingFreq':150, 'nPeaks':Q}
+initArgs['sn'] = None if fixHypLik else sn
 
 # Random starts
 for itr in range(nItr):
-    initArgs = {'Q':Q,'x':x,'y':y, 'samplingFreq':150, 'nPeaks':4}
-    initArgs['sn'] = None if fixHypLik else sn
     # Initialize hyperparams
     hypGuess = gp.core.initSMParamsFourier(**initArgs)
     # Optimize the guessed hyperparams
@@ -55,7 +55,7 @@ for itr in range(nItr):
     try:
         optOutput = sopt.minimize(fun=hypGP.train, x0=hypGuess, method=l1Optimizer,
                                   options=l1Options)
-    except:
+    except Exception as e:
         print "Iteration: ", itr, "FAILED"
         continue
     hypTrained = optOutput.x
