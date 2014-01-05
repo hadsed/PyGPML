@@ -74,10 +74,11 @@ def wrapperkernel(hyp, x=None, z=None, diag=False):
 negLogML = np.inf
 hypInit = None
 nItr = 1
+
 # Define core functions
-likFunc = 'gaussian'
-meanFunc = 'zero'
-infFunc = 'exact'
+likFunc = gp.likelihoods.gaussian
+meanFunc = gp.means.zero
+infFunc = gp.inferences.exact
 # covFunc = rqkernel
 covFunc = wrapperkernel
 

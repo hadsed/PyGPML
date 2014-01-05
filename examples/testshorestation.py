@@ -26,10 +26,10 @@ nItr = 10
 Q = 10
 
 # Define core functions
-likFunc = 'gaussian'
-meanFunc = 'zero'
-infFunc = 'exact'
-covFunc = 'spectral_mixture'
+likFunc = gp.likelihoods.gaussian
+meanFunc = gp.means.zero
+infFunc = gp.inferences.exact
+covFunc = gp.kernels.spectral_mixture
 
 l1Optimizer = 'COBYLA'
 l1Options = {'maxiter':100}

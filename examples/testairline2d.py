@@ -36,10 +36,10 @@ nItr = 10
 Q = 10
 
 # Define core functions
-likFunc = 'gaussian'
-meanFunc = 'zero'
-infFunc = 'exact'
-covFunc = 'spectral_mixture'
+likFunc = gp.likelihoods.gaussian
+meanFunc = gp.means.zero
+infFunc = gp.inferences.exact
+covFunc = gp.kernels.spectral_mixture
 
 # Set the optimizer types and options
 # l1 is for the random starts, l2 does more

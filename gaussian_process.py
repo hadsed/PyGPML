@@ -34,24 +34,6 @@ class GaussianProcess(object):
         self.ytrain = np.atleast_2d(ytrain)
         self.xtest = np.atleast_2d(xtest) if xtest is not None else None
         self.ytest = np.atleast_2d(ytest) if ytest is not None else None
-        # Check if we're being given a custom functions or a string
-        # which corresponds to a built-in function
-        if isinstance(cov, basestring):
-            self.cov = eval('kernels.' + cov)
-        else:
-           self.cov = cov
-        if isinstance(inf, basestring):
-            self.inf = eval('inferences.' + inf)
-        else:
-            self.inf = inf
-        if isinstance(lik, basestring):
-            self.lik = eval('likelihoods.' + lik)
-        else:
-            self.lik = lik
-        if isinstance(mean, basestring):
-            self.mean = eval('means.' + mean)
-        else:
-            self.mean = mean
         self.nlml = np.inf
         self.hyp = hyp
         # Make sure we have all of the appropriate elements in
@@ -102,9 +84,9 @@ class GaussianProcess(object):
         nlik = ncov + len(hypdict['lik'])
         nmean = ncov + nlik + len(hypdict['mean'])
         return {
-            'cov': hypflat[0:ncov] if ncov > 0 else [],
-            'lik': hypflat[ncov:nlik] if nlik > 0 else [],
-            'mean': hypflat[nlik:nmean] if nmean > 0 else []
+            'cov': hypflat[0:ncov] if ncov > 0 else np.array([]),
+            'lik': hypflat[ncov:nlik] if nlik > 0 else np.array([]),
+            'mean': hypflat[nlik:nmean] if nmean > 0 else np.array([])
             }
 
     def train(self, method, options, write=True):

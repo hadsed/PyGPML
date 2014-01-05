@@ -25,10 +25,10 @@ nItr = 10
 Q = 10
 
 # Define core functions
-likFunc = 'gaussian'
-meanFunc = 'zero'
-infFunc = 'exact'
-covFunc = 'spectral_mixture'
+likFunc = gp.likelihoods.gaussian
+meanFunc = gp.means.zero
+infFunc = gp.inferences.exact
+covFunc = gp.kernels.spectral_mixture
 
 # Set the optimizer types and options
 # l1 is for the random starts, l2 does more
@@ -97,7 +97,7 @@ pl.fill(fillx, filly, alpha=.5, fc='0.5', ec='None',
 
 # Now try to do a vanilla isotropic Gaussian kernel
 seOptimizer = 'COBYLA'
-covFunc = 'radial_basis'
+covFunc = gp.kernels.radial_basis
 sn = 0.1
 hypSEInit = {
     'cov': np.log([np.std(y), 40.]),
