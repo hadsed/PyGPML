@@ -34,6 +34,10 @@ class GaussianProcess(object):
         self.ytrain = np.atleast_2d(ytrain)
         self.xtest = np.atleast_2d(xtest) if xtest is not None else None
         self.ytest = np.atleast_2d(ytest) if ytest is not None else None
+        self.cov = cov
+        self.inf = inf
+        self.lik = lik
+        self.mean = mean
         self.nlml = np.inf
         self.hyp = hyp
         # Make sure we have all of the appropriate elements in
@@ -56,22 +60,6 @@ class GaussianProcess(object):
         # Keep a standard flattened version of the hyperparams dict
         self.hypflat = self._hypDict2Flat(self.hyp)
 
-    def _hypDict2Flat(self, hypdict):
-        """
-        Create a flattened version of @hypdict, which is
-        the structured hyperparameters dictionary with elements
-        'cov', 'lik', and 'mean', which we will unpack in that order
-        into a flat list.
-        """
-        hypflat = []
-        if np.atleast_1d(hypdict['cov']).size > 0:
-            hypflat = np.atleast_1d(hypdict['cov'])
-        if np.atleast_1d(hypdict['lik']).size > 0:
-            hypflat = np.concatenate([hypflat, np.atleast_1d(hypdict['lik'])])
-        if np.atleast_1d(hypdict['mean']).size > 0:
-            hypflat = np.concatenate([hypflat, np.atleast_1d(hypdict['mean'])])
-        return hypflat
-
     def _hypFlat2Dict(self, hypflat):
         """
         Reconstruct a hyperparameter dictionary from a flattened
@@ -88,6 +76,22 @@ class GaussianProcess(object):
             'lik': hypflat[ncov:nlik] if nlik > 0 else np.array([]),
             'mean': hypflat[nlik:nmean] if nmean > 0 else np.array([])
             }
+
+    def _hypDict2Flat(self, hypdict):
+        """
+        Create a flattened version of @hypdict, which is
+        the structured hyperparameters dictionary with elements
+        'cov', 'lik', and 'mean', which we will unpack in that order
+        into a flat list.
+        """
+        hypflat = []
+        if np.atleast_1d(hypdict['cov']).size > 0:
+            hypflat = np.atleast_1d(hypdict['cov'])
+        if np.atleast_1d(hypdict['lik']).size > 0:
+            hypflat = np.concatenate([hypflat, np.atleast_1d(hypdict['lik'])])
+        if np.atleast_1d(hypdict['mean']).size > 0:
+            hypflat = np.concatenate([hypflat, np.atleast_1d(hypdict['mean'])])
+        return hypflat
 
     def train(self, method, options, write=True):
         """
