@@ -96,6 +96,9 @@ def spectral_mixture(hyp, x=None, z=None, diag=False):
       [v_0, v_1, ..., v_q] ]
 
     and then flattened to give hyp = [ w_0, ..., w_q, mu_0, ..., v_q ].
+    So then P is the dimensionality of the data and Q is the number of
+    Gaussians in the Gaussian mixture model (roughly speaking, Q is the
+    number of peaks we attempt to model).
 
     [1] Wilson, A. G., & Adams, R. P. (2013). Gaussian process covariance
         kernels for pattern discovery and extrapolation. arXiv preprint 

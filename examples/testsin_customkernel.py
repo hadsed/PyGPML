@@ -72,6 +72,7 @@ def wrapperkernel(hyp, x=None, z=None, diag=False):
 
 # Initialize some params
 negLogML = np.inf
+hypInit = None
 nItr = 1
 # Define core functions
 likFunc = 'gaussian'
@@ -79,25 +80,31 @@ meanFunc = 'zero'
 infFunc = 'exact'
 # covFunc = rqkernel
 covFunc = wrapperkernel
+
+# Set the optimizer types and options
+# l1 is for the random starts, l2 does more
+# optimization for the best one from l1.
 l1Optimizer = 'COBYLA'
 l1Options = {'maxiter':100}
 l2Optimizer = 'L-BFGS-B'
 l2Options = {'maxiter':100}
 
 # Noise std. deviation
-fixHypLik = False
 sn = 1.0
 
 # Initialize hyperparams
 # hypGuess = np.log([0.1, 0.1, 0.1])  # for the RQ kernel
 # hypGuess = np.log([0.05, 0.1, 1.0])  # for the periodic kernel
-hypGuess = np.log([0.05, 0.1, 1.0, 
+hypGuess = {
+    'cov': np.log([0.05, 0.1, 1.0, 
                    0.05, 0.1, 1.0, 
-                   0.1, 0.1, 0.1])  # for the periodic-RQ kernel
+                   0.1, 0.1, 0.1]),  # for the periodic-RQ kernel
+    'lik': np.atleast_1d(np.log(sn)),
+    'mean': np.array([])
+    }
 # Optimize the guessed hyperparams
-hypGP = gp.GaussianProcess(hyp=hypGuess, inf=infFunc, mean=meanFunc,
-                           cov=covFunc, lik=likFunc, hypLik=np.log(sn),
-                           fixHypLik=fixHypLik, xtrain=x, ytrain=y, xtest=xt)
+hypGP = gp.GaussianProcess(hyp=hypGuess, inf=infFunc, mean=meanFunc, cov=covFunc, 
+                           lik=likFunc, xtrain=x, ytrain=y, xtest=xt)
 # Random starts
 for itr in range(nItr):
     # Start over
@@ -120,9 +127,9 @@ hypGP.nlml = negLogML
 # Optimize the best hyperparams even more
 hypGP.hyp, hypGP.nlml = hypGP.train(method=l2Optimizer, options=l2Options)
 print "Final hyperparams likelihood: ", negLogML
-print "Noise parameter: ", np.exp(hypGP.hyp[-1]) if not fixHypLik else sn
+print "Noise parameter: ", np.exp(hypGP.hyp['lik'])
 print "Reoptimized: ", hypGP.nlml
-print np.exp(hypGP.hyp)
+print np.exp(hypGP.hyp['cov'])
 
 # Do the extrapolation
 prediction = hypGP.predict()

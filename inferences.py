@@ -10,7 +10,7 @@ Description: Keeps all inference functions.
 import numpy as np
 from scipy import linalg as sln
 
-def exact(cov, mean, hyp, x, y, pred=True, hypLik=0):
+def exact(cov, mean, hyp, x, y, pred=True):
     """
     This is the exact inference method which is solved partially
     analytically. See GPML textbook Ch. 2 for more information,
@@ -18,9 +18,9 @@ def exact(cov, mean, hyp, x, y, pred=True, hypLik=0):
     2.1.
     """
     n, D = x.shape
-    K = cov(hyp, x, x)
-    m = mean(x)
-    sn2 = np.exp(2*hypLik) # noise
+    K = cov(hyp['cov'], x, x)
+    m = mean(hyp['mean'], x)
+    sn2 = np.exp(2*hyp['lik'])  # noise
     lower = False
     # Basically the correlation matrix
     L = sln.cholesky(K/sn2 + np.eye(n))

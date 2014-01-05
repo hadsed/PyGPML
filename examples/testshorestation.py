@@ -19,12 +19,11 @@ yt = np.matrix(data['ytest'])
 # xt = np.concatenate((x,xt))
 # yt = np.concatenate((y,yt))
 
-skipSM = False
-Q = 10
-
+# Set some parameters
 negLogML = np.inf
 hypInit = None
 nItr = 10
+Q = 10
 
 # Define core functions
 likFunc = 'gaussian'
@@ -33,23 +32,19 @@ infFunc = 'exact'
 covFunc = 'spectral_mixture'
 
 l1Optimizer = 'COBYLA'
-l1Options = {'maxiter':100 if not skipSM else 1}
-#l2Optimizer = 'L-BFGS-B'
-l2Optimizer = 'COBYLA'
-l2Options = {'maxiter':100 if not skipSM else 1}
+l1Options = {'maxiter':100}
+l2Optimizer = 'L-BFGS-B'
+l2Options = {'maxiter':1000}
 
 # Noise std. deviation
-fixHypLik = False
 sn = 1.0
 
 # Initialize hyperparams
-initArgs = {'Q':Q,'x':x,'y':y, 'samplingFreq':1, 'nPeaks':Q}
-initArgs['sn'] = None if fixHypLik else sn
+initArgs = {'Q':Q,'x':x,'y':y, 'samplingFreq':1, 'nPeaks':Q, 'sn':sn}
 hypGuess = gp.core.initSMParamsFourier(**initArgs)
 # Initialize GP object
-hypGP = gp.GaussianProcess(hyp=hypGuess, inf=infFunc, mean=meanFunc,
-                           cov=covFunc, lik=likFunc, hypLik=np.log(sn),
-                           fixHypLik=fixHypLik, xtrain=x, ytrain=y, xtest=xt)
+hypGP = gp.GaussianProcess(hyp=hypGuess, inf=infFunc, mean=meanFunc, cov=covFunc,
+                           lik=likFunc, xtrain=x, ytrain=y, xtest=xt)
 # Random starts
 for itr in range(nItr):
     # Start over
@@ -61,8 +56,6 @@ for itr in range(nItr):
     except Exception as e:
         print "Iteration: ", itr, "FAILED"
         print "\t", e
-        import traceback
-        traceback.print_exc()
         continue
     # Best random initialization
     if hypGP.nlml < negLogML:
@@ -76,12 +69,9 @@ hypGP.nlml = negLogML
 # Optimize the best hyperparams even more
 hypGP.hyp, hypGP.nlml = hypGP.train(method=l2Optimizer, options=l2Options)
 print "Final hyperparams likelihood: ", negLogML
-print "Noise parameter: ", np.exp(hypGP.hyp[-1]) if not fixHypLik else sn
+print "Noise parameter: ", np.exp(hypGP.hyp['lik'])
 print "Reoptimized: ", hypGP.nlml
-if fixHypLik:
-    print np.exp(hypGP.hyp.reshape(3,Q))
-else:
-    print np.exp(hypGP.hyp[0:-1].reshape(3,Q))
+print np.exp(hypGP.hyp['cov'].reshape(3,Q))
 
 # Do the extrapolation
 prediction = hypGP.predict()

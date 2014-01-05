@@ -30,13 +30,10 @@ yt = np.hstack((y1t,y2t))
 #xt = np.concatenate((x,xt))
 #yt = np.concatenate((y,yt))
 
-skipSM = False
-Q = 10
-
 negLogML = np.inf
-nItr = 10 if not skipSM else 1
-hypInit = []
-hypTrained = []
+hypInit = None
+nItr = 10
+Q = 10
 
 # Define core functions
 likFunc = 'gaussian'
@@ -44,24 +41,23 @@ meanFunc = 'zero'
 infFunc = 'exact'
 covFunc = 'spectral_mixture'
 
+# Set the optimizer types and options
+# l1 is for the random starts, l2 does more
+# optimization for the best one from l1.
 l1Optimizer = 'COBYLA'
-l1Options = {'maxiter':100 if not skipSM else 1}
+l1Options = {'maxiter':100}
 l2Optimizer = 'L-BFGS-B'
-#l2Optimizer = 'COBYLA'
-l2Options = {'maxiter':100 if not skipSM else 1}
+l2Options = {'maxiter':100}
 
 # Noise std. deviation
-fixHypLik = False
 sn = 1
 
 # Initialize hyperparams
-initArgs = {'Q':Q,'x':x,'y':y}
-initArgs['sn'] = None if fixHypLik else sn
+initArgs = {'Q':Q,'x':x,'y':y, 'sn':sn}
 hypGuess = gp.core.initSMParams(**initArgs)
 # Initialize GP object
-hypGP = gp.GaussianProcess(hyp=hypGuess, inf=infFunc, mean=meanFunc,
-                           cov=covFunc, lik=likFunc, hypLik=np.log(sn),
-                           fixHypLik=fixHypLik, xtrain=x, ytrain=y, xtest=xt)
+hypGP = gp.GaussianProcess(hyp=hypGuess, inf=infFunc, mean=meanFunc, cov=covFunc, 
+                           lik=likFunc, xtrain=x, ytrain=y, xtest=xt)
 # Random starts
 for itr in range(nItr):
     # Start over
@@ -86,9 +82,9 @@ hypGP.nlml = negLogML
 # Optimize the best hyperparams even more
 hypGP.hyp, hypGP.nlml = hypGP.train(method=l2Optimizer, options=l2Options)
 print "Final hyperparams likelihood: ", negLogML
-print "Noise parameter: ", np.exp(hypGP.hyp[-1]) if not fixHypLik else sn
+print "Noise parameter: ", np.exp(hypGP.hyp['lik'])
 print "Reoptimized: ", hypGP.nlml
-print np.exp(hypGP.hyp)
+print np.exp(hypGP.hyp['cov'])
 
 # Do the extrapolation
 prediction = hypGP.predict()

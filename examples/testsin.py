@@ -19,12 +19,11 @@ dy = 0.5 + 1.e-1 * np.random.random(y.shape)
 noise = np.random.normal(0, dy)
 y += noise
 
-# Number of Gaussians in the mixture model
-Q = 4
-skipSM = False
+# Set some parameters
 negLogML = np.inf
 hypInit = None
 nItr = 10
+Q = 6
 
 # Define core functions
 likFunc = 'gaussian'
@@ -32,24 +31,24 @@ meanFunc = 'zero'
 infFunc = 'exact'
 covFunc = 'spectral_mixture'
 
+# Set the optimizer types and options
+# l1 is for the random starts, l2 does more
+# optimization for the best one from l1.
 l1Optimizer = 'COBYLA'
-l1Options = {'maxiter':100 if not skipSM else 1}
+l1Options = {'maxiter':100}
 l2Optimizer = 'CG'
-# l2Optimizer = 'COBYLA'
-l2Options = {'maxiter':100 if not skipSM else 1}
+l2Options = {'maxiter':100}
 
 # Noise std. deviation
-fixHypLik = False
-sn = 1.0
+noise = 1.0
 
 # Initialize hyperparams
-initArgs = {'Q':Q,'x':x,'y':y, 'samplingFreq':150, 'nPeaks':Q}
-initArgs['sn'] = None if fixHypLik else sn
+initArgs = {'Q':Q,'x':x,'y':y, 'samplingFreq':150, 'nPeaks':Q, 'sn':noise}
 hypGuess = gp.core.initSMParamsFourier(**initArgs)
+
 # Initialize GP object
-hypGP = gp.GaussianProcess(hyp=hypGuess, inf=infFunc, mean=meanFunc,
-                           cov=covFunc, lik=likFunc, hypLik=np.log(sn),
-                           fixHypLik=fixHypLik, xtrain=x, ytrain=y, xtest=xt)
+hypGP = gp.GaussianProcess(hyp=hypGuess, inf=infFunc, mean=meanFunc, cov=covFunc,
+                           lik=likFunc, xtrain=x, ytrain=y, xtest=xt)
 # Random starts
 for itr in range(nItr):
     # Start over
@@ -59,7 +58,7 @@ for itr in range(nItr):
     try:
         hypGP.train(l1Optimizer, l1Options)
     except Exception as e:
-        print "Iteration: ", itr, "FAILED"
+        print "Iteration: ", itr+1, "FAILED"
         print "\t", e
         continue
     # Best random initialization
@@ -74,12 +73,9 @@ hypGP.nlml = negLogML
 # Optimize the best hyperparams even more
 hypGP.hyp, hypGP.nlml = hypGP.train(method=l2Optimizer, options=l2Options)
 print "Final hyperparams likelihood: ", negLogML
-print "Noise parameter: ", np.exp(hypGP.hyp[-1]) if not fixHypLik else sn
+print "Noise parameter: ", np.exp(hypGP.hyp['lik'])
 print "Reoptimized: ", hypGP.nlml
-if fixHypLik:
-    print np.exp(hypGP.hyp.reshape(3,Q))
-else:
-    print np.exp(hypGP.hyp[0:-1].reshape(3,Q))
+print np.exp(hypGP.hyp['cov'].reshape(3,Q))
 
 # Do the extrapolation
 prediction = hypGP.predict()
@@ -97,6 +93,7 @@ filly = np.concatenate([(np.array(mean.ravel()).ravel() - 1.9600 *
                          np.array(sigma.ravel()).ravel()),
                         (np.array(mean.ravel()).ravel() + 1.9600 * 
                          np.array(sigma.ravel()).ravel())[::-1]])
-pl.fill(fillx, filly, alpha=.5, fc='0.5', ec='None', label='95% confidence interval')
+pl.fill(fillx, filly, alpha=.5, fc='0.5', ec='None', 
+        label='95% confidence interval')
 pl.legend()
 pl.show()

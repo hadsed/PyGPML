@@ -9,7 +9,7 @@ Description: Keeps all mean functions.
 
 import numpy as np
 
-def zero(x):
+def zero(hyp, x):
     """
     Returns a zero-mean function.
     """

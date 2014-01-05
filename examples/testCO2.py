@@ -18,12 +18,11 @@ yt = np.matrix(data['ytest'])
 #xt = np.concatenate((x,xt))
 #yt = np.concatenate((y,yt))
 
-skipSM = False
-Q = 10
-
+# Define some parameters
 negLogML = np.inf
 hypInit = None 
 nItr = 10
+Q = 10
 
 # Define core functions
 likFunc = 'gaussian'
@@ -31,24 +30,23 @@ meanFunc = 'zero'
 infFunc = 'exact'
 covFunc = 'spectral_mixture'
 
+# Set the optimizer types and options
+# l1 is for the random starts, l2 does more
+# optimization for the best one from l1.
 l1Optimizer = 'COBYLA'
-l1Options = {'maxiter':100 if not skipSM else 1}
+l1Options = {'maxiter':100}
 l2Optimizer = 'L-BFGS-B'
-#l2Optimizer = 'COBYLA'
-l2Options = {'maxiter':100 if not skipSM else 1}
+l2Options = {'maxiter':1000}
 
 # Noise std. deviation
-fixHypLik = False
 sn = 1.0
 
 # Initialize hyperparams
-initArgs = {'Q':Q,'x':x,'y':y, 'samplingFreq':150, 'nPeaks':Q}
-initArgs['sn'] = None if fixHypLik else sn
+initArgs = {'Q':Q,'x':x,'y':y, 'samplingFreq':150, 'nPeaks':Q, 'sn':sn}
 hypGuess = gp.core.initSMParamsFourier(**initArgs)
 # Initialize GP object
-hypGP = gp.GaussianProcess(hyp=hypGuess, inf=infFunc, mean=meanFunc,
-                           cov=covFunc, lik=likFunc, hypLik=np.log(sn),
-                           fixHypLik=fixHypLik, xtrain=x, ytrain=y, xtest=xt)
+hypGP = gp.GaussianProcess(hyp=hypGuess, inf=infFunc, mean=meanFunc, cov=covFunc,
+                           lik=likFunc, xtrain=x, ytrain=y, xtest=xt)
 # Random starts
 for itr in range(nItr):
     # Start over
@@ -73,12 +71,9 @@ hypGP.nlml = negLogML
 # Optimize the best hyperparams even more
 hypGP.hyp, hypGP.nlml = hypGP.train(method=l2Optimizer, options=l2Options)
 print "Final hyperparams likelihood: ", negLogML
-print "Noise parameter: ", np.exp(hypGP.hyp[-1]) if not fixHypLik else sn
+print "Noise parameter: ", np.exp(hypGP.hyp['lik'])
 print "Reoptimized: ", hypGP.nlml
-if fixHypLik:
-    print np.exp(hypGP.hyp.reshape(3,Q))
-else:
-    print np.exp(hypGP.hyp[0:-1].reshape(3,Q))
+print np.exp(hypGP.hyp['cov'].reshape(3,Q))
 
 # Do the extrapolation
 prediction = hypGP.predict()
@@ -103,18 +98,21 @@ pl.fill(fillx, filly, alpha=.5, fc='0.5', ec='None',
 seOptimizer = 'COBYLA'
 covFunc = 'radial_basis'
 sn = 0.1
-hypSEInit = np.log([np.std(y), 40., sn])
-seGP = gp.GaussianProcess(hyp=hypSEInit, inf=infFunc, mean=meanFunc, 
-                          cov=covFunc, lik=likFunc, hypLik=np.log(sn), 
-                          xtrain=x, ytrain=y, xtest=xt)
+hypSEInit = {
+    'cov': np.log([np.std(y), 40.]),
+    'lik': np.atleast_1d(sn),
+    'mean': np.array([])
+    }
+seGP = gp.GaussianProcess(hyp=hypSEInit, inf=infFunc, mean=meanFunc, cov=covFunc,
+                          lik=likFunc, xtrain=x, ytrain=y, xtest=xt)
 seGP.train(seOptimizer, {'maxiter':1000})
 sePred = seGP.predict()
 seMean = sePred['ymu']
 seSig2 = sePred['ys2']
 
 print "Optimized SE likelihood: ", seGP.nlml
-print "Noise parameter: ", seGP.hyp[-1]
-print "SE hyperparams: ", seGP.hyp[0:-1]
+print "Noise parameter: ", seGP.hyp['lik']
+print "SE hyperparams: ", seGP.hyp['cov']
 
 pl.plot(xt, seMean, 'g', label=u'SE Prediction')
 pl.legend()

@@ -26,8 +26,10 @@ class GaussianProcess(object):
     """
     """
     def __init__(self, xtrain=None, ytrain=None, xtest=None, ytest=None, hyp=None,
-                 fixHypLik=False, hypLik=None, cov='radial_basis', inf='exact', 
-                 lik='gaussian', mean='zero'):
+                 cov='radial_basis', inf='exact', lik='gaussian', mean='zero'):
+        """
+        @hyp is a dict comprised of..
+        """
         self.xtrain = np.atleast_2d(xtrain)
         self.ytrain = np.atleast_2d(ytrain)
         self.xtest = np.atleast_2d(xtest) if xtest is not None else None
@@ -37,7 +39,7 @@ class GaussianProcess(object):
         if isinstance(cov, basestring):
             self.cov = eval('kernels.' + cov)
         else:
-            self.cov = cov
+           self.cov = cov
         if isinstance(inf, basestring):
             self.inf = eval('inferences.' + inf)
         else:
@@ -50,10 +52,60 @@ class GaussianProcess(object):
             self.mean = eval('means.' + mean)
         else:
             self.mean = mean
-        self.hyp = hyp
-        self.hypLik = hypLik
-        self.fixHypLik = fixHypLik
         self.nlml = np.inf
+        self.hyp = hyp
+        # Make sure we have all of the appropriate elements in
+        # the hyperparameters dict
+        if 'cov' not in self.hyp:
+            self.hyp['cov'] = []
+        elif not isinstance(self.hyp['cov'], collections.Iterable):
+            raise ValueError("Covariance kernel hyperparameters is not "
+                             "iterable. Must be list or Numpy array.")
+        if 'lik' not in self.hyp:
+            self.hyp['lik'] = []
+        elif not isinstance(self.hyp['lik'], collections.Iterable):
+            raise ValueError("Likelihood hyperparameters is not iterable. "
+                             "Must be list or Numpy array.")
+        if 'mean' not in self.hyp:
+            self.hyp['mean'] = []
+        elif not isinstance(self.hyp['mean'], collections.Iterable):
+            raise ValueError("Mean hyperparameters is not iterable. "
+                             "Must be list or Numpy array.")
+        # Keep a standard flattened version of the hyperparams dict
+        self.hypflat = self._hypDict2Flat(self.hyp)
+
+    def _hypDict2Flat(self, hypdict):
+        """
+        Create a flattened version of @hypdict, which is
+        the structured hyperparameters dictionary with elements
+        'cov', 'lik', and 'mean', which we will unpack in that order
+        into a flat list.
+        """
+        hypflat = []
+        if np.atleast_1d(hypdict['cov']).size > 0:
+            hypflat = np.atleast_1d(hypdict['cov'])
+        if np.atleast_1d(hypdict['lik']).size > 0:
+            hypflat = np.concatenate([hypflat, np.atleast_1d(hypdict['lik'])])
+        if np.atleast_1d(hypdict['mean']).size > 0:
+            hypflat = np.concatenate([hypflat, np.atleast_1d(hypdict['mean'])])
+        return hypflat
+
+    def _hypFlat2Dict(self, hypflat):
+        """
+        Reconstruct a hyperparameter dictionary from a flattened
+        hyperparameter list using the structure of the hyperparameter
+        dict attribute but using values from the incoming flattened
+        hyperparameters, @hypflat.
+        """
+        hypdict = self.hyp
+        ncov = len(hypdict['cov'])
+        nlik = ncov + len(hypdict['lik'])
+        nmean = ncov + nlik + len(hypdict['mean'])
+        return {
+            'cov': hypflat[0:ncov] if ncov > 0 else [],
+            'lik': hypflat[ncov:nlik] if nlik > 0 else [],
+            'mean': hypflat[nlik:nmean] if nmean > 0 else []
+            }
 
     def train(self, method, options, write=True):
         """
@@ -65,30 +117,24 @@ class GaussianProcess(object):
         @write is a flag that tells whether to write the optimized
         hyperparameters and likelihood to the object attributes.
         """
-        hyp = self.hyp
-        # Last parameter is always the noise variable
-        if self.fixHypLik:
-            hypLik = hyp[-1]
-            hyp = hyp[0:-1]
-            self.hypLik = hypLik
-        else:
-            hypLik = self.hypLik
         # A wrapper function (the optimized variable needs to be first)
-        def infwrapper(hyp, cov, mean, xt, yt, p, hyplik):
-            return self.inf(cov, mean, hyp, xt, yt, p, hyplik)
+        def infwrapper(hypflat, cov, mean, xt, yt, p):
+            hyp = self._hypFlat2Dict(hypflat)
+            return self.inf(cov=cov, mean=mean, hyp=hyp, x=xt, y=yt, pred=p)
         # Do the actual optimization
         optparams = sopt.minimize(fun=infwrapper,
                                   args=(self.cov, self.mean, self.xtrain,
-                                        self.ytrain, False, hypLik),
-                                  x0=hyp,
+                                        self.ytrain, False),
+                                  x0=self.hypflat,
                                   method=method,
                                   options=options)
         # Record these results in the relevant attributes
         if write:
-            self.hyp = optparams.x
+            self.hypflat = optparams.x
+            self.hyp = self._hypFlat2Dict(optparams.x)
             self.nlml = optparams.fun
         # Just return the optimized hyperparams and log-likelihood
-        return (optparams.x, optparams.fun)
+        return (self._hypFlat2Dict(optparams.x), optparams.fun)
 
     def predict(self):
         """
@@ -96,14 +142,13 @@ class GaussianProcess(object):
         x = self.xtrain
         xs = self.xtest
         hyp = self.hyp
-        hypLik = self.hypLik
-        alpha, L, sW = self.inf(self.cov, self.mean, self.hyp, 
-                                self.xtrain, self.ytrain, pred=True)
+        alpha, L, sW = self.inf(cov=self.cov, mean=self.mean, hyp=self.hyp, 
+                                x=self.xtrain, y=self.ytrain, pred=True)
         ones = np.arange(alpha.shape[0], dtype=int) # Well, in MATLAB it's all ones
         # If for some reason L isn't provided
         if L is None:
             nz = np.where(alpha != 0)[0]  # this is really to determine sparsity
-            K = self.cov(hyp, x[nz,:])
+            K = self.cov(hyp['cov'], x[nz,:])
             L = sln.cholesky(np.eye(np.sum(nz)) + (sW*sW.T)*K)
         # Initialize some parameters
         isLtri = (np.tril(L,-1) == 0).all()
@@ -120,9 +165,9 @@ class GaussianProcess(object):
             rng = range(nProcessed, min(nProcessed+nBatch, nPoints))
             xsrng = np.matrix(xs[rng,:])
             xones = np.matrix(x[ones,:])
-            Kdiag = self.cov(self.hyp, xsrng, diag=True)
-            Koff = self.cov(self.hyp, xones, xsrng, diag=False)
-            ms = self.mean(xsrng)
+            Kdiag = self.cov(self.hyp['cov'], xsrng, diag=True)
+            Koff = self.cov(self.hyp['cov'], xones, xsrng, diag=False)
+            ms = self.mean(hyp['mean'], xsrng)
             N = alpha.shape[1]
             # Conditional mean fs|f, GPML Eqs. (2.25), (2.27)
             Fmu = np.tile(ms, (1,N)) + Koff.T*alpha[ones,:]
@@ -143,14 +188,13 @@ class GaussianProcess(object):
                             np.matrix(np.multiply(Koff,(L*Koff))).sum(axis=0).T)
             # No negative elements allowed (it's numerical noise)
             fs2[rng] = fs2[rng].clip(min=0)
-            # In case of sampling (?)
+            # In case of sampling (? this was in the original code ?)
             Fs2 = np.matrix(np.tile(fs2[rng], (1,N)))
-            # 
             if self.ytest is None:
-                Lp, Ymu, Ys2 = self.lik(hyp, [], Fmu, Fs2, hypLik)
+                Lp, Ymu, Ys2 = self.lik(hyp=hyp, y=[], mu=Fmu, s2=Fs2)
             else:
                 Ys = np.tile(ys[rng], (1,N))
-                Lp, Ymu, Ys2 = self.lik(hyp, Ys, Fmu, Fs2, hypLik)
+                Lp, Ymu, Ys2 = self.lik(hyp=hyp, y=Ys, mu=Fmu, s2=Fs2)
 
             # Log probability
             lp[rng] = np.sum(Lp.reshape(Lp.size/N,N), axis=1) / N

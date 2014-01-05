@@ -51,14 +51,14 @@ def initSMParamsFourier(Q, x, y, sn, samplingFreq, nPeaks, relMaxOrder=2):
     m = np.zeros((D,Q))
     s = np.zeros((D,Q))
     w[:] = np.std(y) / Q
-    if sn is None:
-        hypinit = np.zeros(Q+2*D*Q)
-    else:
-        hypinit = np.zeros(Q+2*D*Q+1)
-        hypinit[-1] = np.log(sn)
+    hypinit = {
+        'cov': np.zeros(Q+2*D*Q),
+        'lik': np.atleast_1d(np.log(sn)),
+        'mean': np.array([])
+        }
 
     # Assign hyperparam weights
-    hypinit[0:Q] = np.log(w)
+    hypinit['cov'][0:Q] = np.log(w)
 
     # Assign hyperparam frequencies (mu's)
     signal = np.array(y.ravel()).ravel()  # Make into 1D array
@@ -81,7 +81,7 @@ def initSMParamsFourier(Q, x, y, sn, samplingFreq, nPeaks, relMaxOrder=2):
     # Find specified number (nPeaks) largest peaks
     sortedIdx = frqy[peakIdx].argsort()[::-1][:nPeaks]
     sortedPeakIdx = peakIdx[sortedIdx]
-    hypinit[Q + np.arange(0,Q*D)] = np.log(frqx[sortedPeakIdx])
+    hypinit['cov'][Q + np.arange(0,Q*D)] = np.log(frqx[sortedPeakIdx])
 
     # Assign hyperparam length scales (sigma's)
     for i in range(0,D):
@@ -92,7 +92,7 @@ def initSMParamsFourier(Q, x, y, sn, samplingFreq, nPeaks, relMaxOrder=2):
             d2[d2 == 0] = 1
         maxshift = np.max(np.max(d2))
         s[i,:] = 1./np.abs(maxshift*np.random.ranf((1,Q)))
-    hypinit[Q + Q*D + np.arange(0,Q*D)] = np.log(s[:]).T
+    hypinit['cov'][Q + Q*D + np.arange(0,Q*D)] = np.log(s[:]).T
     
     return hypinit
 
@@ -112,11 +112,11 @@ def initSMParams(Q, x, y, sn):
     m = np.zeros((D,Q))
     s = np.zeros((D,Q))
     w[:] = np.std(y) / Q
-    if sn is None:
-        hypinit = np.zeros(Q+2*D*Q)
-    else:
-        hypinit = np.zeros(Q+2*D*Q+1)
-        hypinit[-1] = np.log(sn)
+    hypinit = {
+        'cov': np.zeros(Q+2*D*Q),
+        'lik': np.atleast_1d(np.log(sn)),
+        'mean': np.array([])
+        }
 
     for i in range(0,D):
         # Calculate distances
@@ -131,13 +131,13 @@ def initSMParams(Q, x, y, sn):
         maxshift = np.max(np.max(d2))
         s[i,:] = 1./np.abs(maxshift*np.random.ranf((1,Q)))
 
-    hypinit[0:Q] = np.log(w)
-    hypinit[Q + np.arange(0,Q*D)] = np.log(m[:]).T
-    hypinit[Q + Q*D + np.arange(0,Q*D)] = np.log(s[:]).T
+    hypinit['cov'][0:Q] = np.log(w)
+    hypinit['cov'][Q + np.arange(0,Q*D)] = np.log(m[:]).T
+    hypinit['cov'][Q + Q*D + np.arange(0,Q*D)] = np.log(s[:]).T
     return hypinit
 
 
-def initBoundedParams(bounds, sn=None):
+def initBoundedParams(bounds, sn=[]):
     """
     Takes in @bounds and returns hyperparameters as an array of the same 
     length. The elements of @bounds are pairs [lower, upper], and the 
@@ -145,17 +145,17 @@ def initBoundedParams(bounds, sn=None):
     in the interval [lower, upper]. If instead of a pair we have a number
     in @bounds, then we assign that value as the appropriate hyperparameter.
     """
-    if sn is None:
-        hypinit = np.empty(len(bounds))
-    else:
-        hypinit = np.empty(len(bounds)+1)
-        hypinit[-1] = sn
+    hypinit = {
+        'cov': np.zeros(Q+2*D*Q),
+        'lik': np.atleast_1d(np.log(sn)),
+        'mean': np.array([])
+        }
     # Sample from a uniform distribution
     for idx, pair in enumerate(bounds):
         # Randomize only if bounds are specified
         if isinstance(pair, collections.Iterable):
-            hypinit[idx] = np.random.uniform(pair[0], pair[1])
+            hypinit['cov'][idx] = np.random.uniform(pair[0], pair[1])
         # If no bounds, then keep default value always
         else:
-            hypinit[idx] = pair
+            hypinit['cov'][idx] = pair
     return hypinit
