@@ -54,6 +54,7 @@ for itr in range(nItr):
     # Start over
     hypGuess = gp.core.initSMParamsFourier(**initArgs)
     hypGP.hyp = hypGuess
+    print hypGP.hyp
     # Optimize the guessed hyperparams
     try:
         hypGP.train(l1Optimizer, l1Options)

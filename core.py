@@ -9,6 +9,7 @@ Description: Any abstract classes and helper functions.
 
 import numpy as np
 from scipy import signal as spsig
+import collections
 
 def sq_dist(A, B=None):
     """
@@ -85,7 +86,7 @@ def initSMParamsFourier(Q, x, y, sn, samplingFreq, nPeaks, relMaxOrder=2):
 
     # Assign hyperparam length scales (sigma's)
     for i in range(0,D):
-        d2 = np.sqrt(sq_dist(x[:,i].T))
+        d2 = np.sqrt(sq_dist(np.atleast_2d(x[:,i]).T))
         if n > 1:
             d2[d2 == 0] = d2[0,1]
         else:
@@ -120,7 +121,7 @@ def initSMParams(Q, x, y, sn):
 
     for i in range(0,D):
         # Calculate distances
-        d2 = np.sqrt(sq_dist(x[:,i].T))
+        d2 = np.sqrt(sq_dist(np.atleast_2d(x[:,i]).T))
         if n > 1:
             d2[d2 == 0] = d2[0,1]
         else:
@@ -146,7 +147,7 @@ def initBoundedParams(bounds, sn=[]):
     in @bounds, then we assign that value as the appropriate hyperparameter.
     """
     hypinit = {
-        'cov': np.zeros(Q+2*D*Q),
+        'cov': np.zeros(len(bounds)),
         'lik': np.atleast_1d(np.log(sn)),
         'mean': np.array([])
         }
