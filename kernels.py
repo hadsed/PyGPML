@@ -10,7 +10,7 @@ Description: Keeps all kernel functions for the GP.
 import numpy as np
 import core
 
-def radial_basis(hyp, x=None, z=None, diag=False):
+def radial_basis(hypcov, x=None, z=None, diag=False):
     """
     Radial-basis function (also known as squared-exponential and 
     Gaussian kernels) takes the following form,
@@ -18,10 +18,10 @@ def radial_basis(hyp, x=None, z=None, diag=False):
     k(t) = \sigma^2_f * exp(-t^2/(2L^2))
 
     where \sigma and L are the adjustable hyperparameters giving
-    hyp = [ \sigma, L ].
+    hypcov = [ \sigma, L ].
     """
-    sf2 = np.exp(2*hyp[0])
-    ell2 = np.exp(2*hyp[1])
+    sf2 = np.exp(2*hypcov[0])
+    ell2 = np.exp(2*hypcov[1])
     if diag:
         K = np.zeros((x.shape[0],1))
     else:
@@ -33,7 +33,7 @@ def radial_basis(hyp, x=None, z=None, diag=False):
     return K
 
 
-def rational_quadratic(hyp, x=None, z=None, diag=False):
+def rational_quadratic(hypcov, x=None, z=None, diag=False):
     """
     Rational-quadratic kernel has the following form,
 
@@ -43,9 +43,9 @@ def rational_quadratic(hyp, x=None, z=None, diag=False):
 
     hyp = [ hscale, alpha, lamb ].
     """
-    hscale = np.exp(hyp[0])
-    alpha = np.exp(hyp[1])
-    lamb = np.exp(hyp[2])
+    hscale = np.exp(hypcov[0])
+    alpha = np.exp(hypcov[1])
+    lamb = np.exp(hypcov[2])
     if diag:
         K = np.zeros((x.shape[0],1))
     else:
@@ -57,7 +57,7 @@ def rational_quadratic(hyp, x=None, z=None, diag=False):
     return K
 
 
-def periodic(hyp, x=None, z=None, diag=False):
+def periodic(hypcov, x=None, z=None, diag=False):
     """
     The periodic kernel has a form
 
@@ -67,9 +67,9 @@ def periodic(hyp, x=None, z=None, diag=False):
 
     hyp = [ sigma, ell, per ].
     """
-    sigma = np.exp(hyp[0])
-    ell = np.exp(hyp[1])
-    per = np.exp(hyp[2])
+    sigma = np.exp(hypcov[0])
+    ell = np.exp(hypcov[1])
+    per = np.exp(hypcov[2])
     if diag:
         K = np.zeros((x.shape[0],1))
     else:
@@ -82,7 +82,7 @@ def periodic(hyp, x=None, z=None, diag=False):
     return K
 
 
-def spectral_mixture(hyp, x=None, z=None, diag=False):
+def spectral_mixture(hypcov, x=None, z=None, diag=False):
     """
     Spectral Mixture kernel takes the following form [1],
 
@@ -106,11 +106,11 @@ def spectral_mixture(hyp, x=None, z=None, diag=False):
     
     """
     n, D = x.shape
-    hyp = np.array(hyp).flatten()
-    Q = hyp.size/(1+2*D)
-    w = np.exp(hyp[0:Q])
-    m = np.exp(hyp[Q+np.arange(0,Q*D)]).reshape(D,Q)
-    v = np.exp(2*hyp[Q+Q*D+np.arange(0,Q*D)]).reshape(D,Q)
+    hypcov = np.array(hypcov).flatten()
+    Q = hypcov.size/(1+2*D)
+    w = np.exp(hypcov[0:Q])
+    m = np.exp(hypcov[Q+np.arange(0,Q*D)]).reshape(D,Q)
+    v = np.exp(2*hypcov[Q+Q*D+np.arange(0,Q*D)]).reshape(D,Q)
     if diag:
         d2 = np.zeros((n,1,D))
     else:
