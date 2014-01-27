@@ -8,6 +8,7 @@ Description: Keeps all kernel functions for the GP.
 '''
 
 import numpy as np
+import scipy as sp
 import core
 
 def radial_basis(hypcov, x=None, z=None, diag=False):
@@ -26,9 +27,9 @@ def radial_basis(hypcov, x=None, z=None, diag=False):
         K = np.zeros((x.shape[0],1))
     else:
         if x is z:
-            K = core.sq_dist(x.T/ell2)
+            K = sp.spatial.distance.cdist(x/ell2, x/ell2, 'sqeuclidean')
         else:
-            K = core.sq_dist(x.T/ell2, z.T/ell2)
+            K = sp.spatial.distance.cdist(x/ell2, z/ell2, 'sqeuclidean')
     K = sf2*np.exp(-K/2)
     return K
 
@@ -50,9 +51,9 @@ def rational_quadratic(hypcov, x=None, z=None, diag=False):
         K = np.zeros((x.shape[0],1))
     else:
         if x is z:
-            K = core.sq_dist(x.T/lamb**2)
+            K = sp.spatial.distance.cdist(x/lamb**2, x/lamb**2, 'sqeuclidean')
         else:
-            K = core.sq_dist(x.T/lamb**2, z.T/lamb**2)
+            K = sp.spatial.distance.cdist(x/lamb**2, z/lamb**2, 'sqeuclidean')
     K = hscale**2 * np.power(1 + K/alpha, -alpha)
     return K
 
@@ -74,9 +75,9 @@ def periodic(hypcov, x=None, z=None, diag=False):
         K = np.zeros((x.shape[0],1))
     else:
         if x is z:
-            K = core.sq_dist(x.T)
+            K = sp.spatial.distance.cdist(x, x, 'sqeuclidean')
         else:
-            K = core.sq_dist(x.T, z.T)
+            K = sp.spatial.distance.cdist(x, z, 'sqeuclidean')
     K = np.sqrt(K)  # need the absolute distance, not squared
     K = sigma**2 * np.exp(-2/ell**2 * np.power(np.sin(np.pi*K/per), 2))
     return K

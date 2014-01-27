@@ -1,4 +1,10 @@
 """
+
+File: coretests.py
+Author: Hadayat Seddiqi
+Date: 1-26-2014
+Description: Holds all tests for core functions in core.py.
+
 """
 
 import numpy as np
