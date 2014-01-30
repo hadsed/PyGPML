@@ -30,33 +30,48 @@ class GaussianProcess(object):
         """
         @hyp is a dict comprised of..
         """
-        self.xtrain = np.atleast_2d(xtrain)
-        self.ytrain = np.atleast_2d(ytrain)
-        self.xtest = np.atleast_2d(xtest) if xtest is not None else None
-        self.ytest = np.atleast_2d(ytest) if ytest is not None else None
+        # self.xtrain = np.atleast_2d(xtrain)
+        # self.ytrain = np.atleast_2d(ytrain)
+        # self.xtest = np.atleast_2d(xtest) if xtest is not None else None
+        # self.ytest = np.atleast_2d(ytest) if ytest is not None else None
+
+        self.xtrain = np.matrix(xtrain)
+        self.ytrain = np.matrix(ytrain)
+        self.xtest = np.matrix(xtest) if xtest is not None else None
+        self.ytest = np.matrix(ytest) if ytest is not None else None
+
         self.cov = cov
         self.inf = inf
         self.lik = lik
         self.mean = mean
         self.nlml = np.inf
         self.hyp = hyp
-        # Make sure we have all of the appropriate elements in
-        # the hyperparameters dict
+        # Make sure we have each of 'cov', 'lik', and 'mean' in the
+        # hyperparameters dict, make sure they are iterable or fail,
+        # and ensure they are numpy arrays, not lists or otherwise
         if 'cov' not in self.hyp:
-            self.hyp['cov'] = []
+            self.hyp['cov'] = np.array([])
         elif not isinstance(self.hyp['cov'], collections.Iterable):
             raise ValueError("Covariance kernel hyperparameters is not "
                              "iterable. Must be list or Numpy array.")
+        else:
+            self.hyp['cov'] = np.array(self.hyp['cov'])
+
         if 'lik' not in self.hyp:
-            self.hyp['lik'] = []
+            self.hyp['lik'] = np.array([])
         elif not isinstance(self.hyp['lik'], collections.Iterable):
             raise ValueError("Likelihood hyperparameters is not iterable. "
                              "Must be list or Numpy array.")
+        else:
+            self.hyp['lik'] = np.array(self.hyp['lik'])
+
         if 'mean' not in self.hyp:
-            self.hyp['mean'] = []
+            self.hyp['mean'] = np.array([])
         elif not isinstance(self.hyp['mean'], collections.Iterable):
             raise ValueError("Mean hyperparameters is not iterable. "
                              "Must be list or Numpy array.")
+        else:
+            self.hyp['mean'] = np.array(self.hyp['mean'])
         # Keep a standard flattened version of the hyperparams dict
         self.hypflat = self._hypDict2Flat(self.hyp)
 
@@ -84,7 +99,7 @@ class GaussianProcess(object):
         'cov', 'lik', and 'mean', which we will unpack in that order
         into a flat list.
         """
-        hypflat = []
+        hypflat = np.array([])
         if np.atleast_1d(hypdict['cov']).size > 0:
             hypflat = np.atleast_1d(hypdict['cov'])
         if np.atleast_1d(hypdict['lik']).size > 0:
@@ -93,7 +108,7 @@ class GaussianProcess(object):
             hypflat = np.concatenate([hypflat, np.atleast_1d(hypdict['mean'])])
         return hypflat
 
-    def train(self, method, options, write=True):
+    def train(self, method='COBYLA', options={}, write=True):
         """
         Train the Gaussian process model using @method, where
         @options are the optimization routine arguments and @hyp
@@ -177,9 +192,9 @@ class GaussianProcess(object):
             # In case of sampling (? this was in the original code ?)
             Fs2 = np.matrix(np.tile(fs2[rng], (1,N)))
             if self.ytest is None:
-                Lp, Ymu, Ys2 = self.lik(hyp=hyp, y=[], mu=Fmu, s2=Fs2)
+                Lp, Ymu, Ys2 = self.lik(hyp=hyp, y=None, mu=Fmu, s2=Fs2)
             else:
-                Ys = np.tile(ys[rng], (1,N))
+                Ys = np.tile(self.ytest[rng], (1,N))
                 Lp, Ymu, Ys2 = self.lik(hyp=hyp, y=Ys, mu=Fmu, s2=Fs2)
 
             # Log probability

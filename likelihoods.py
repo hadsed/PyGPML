@@ -22,7 +22,7 @@ def gaussian(hyp=None, y=None, mu=None, s2=None):
     is the standard deviation. See GPML Eq. (2.34).
     """
     sn2 = np.exp(2*hyp['lik'])
-    if not y:
+    if y is None:
         y = np.zeros(mu.shape)
     # Calculate the [negative] log probability of the target point's
     # [Gaussian] distribution (also where the mean and variance come from)
