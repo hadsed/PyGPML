@@ -32,7 +32,7 @@ def sq_dist(A, B=None):
         a = A - np.tile(mu, (1,n))
         b = B - np.tile(mu, (1,m))
 
-    C = np.tile(np.sum(np.multiply(a,a), axis=0).T, (1,m)) + \
+    C = np.tile(np.atleast_2d(np.sum(np.multiply(a,a), axis=0)).T, (1,m)) + \
         np.tile(np.sum(np.multiply(b,b), axis=0), (n,1)) - 2*a.T*b
     # Make sure we're staying positive :)
     C = C.clip(min=0)
