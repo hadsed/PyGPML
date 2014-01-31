@@ -7,6 +7,6 @@ Description: Simply adds the GP library to the system
 '''
 
 # Put the absolute path of the GP code here
-gplib_path = '/home/hadsed/Downloads/PyGPML'
+gplib_path = '/home/hadsed/Research/nasa/PyGPML'
 import sys
 sys.path.append(gplib_path)

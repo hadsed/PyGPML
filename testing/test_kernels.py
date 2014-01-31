@@ -18,10 +18,10 @@ class TestKernels:
         f = lambda x: np.sin(2*np.pi*10.*x)
         step = 0.4
         # The spectral mixture kernel doesn't yet work with ndarrays
-        # self.x = np.atleast_2d(np.arange(0,1,step)).T
-        # self.y = np.atleast_2d(f(self.x).ravel()).T
-        self.x = np.matrix(np.arange(0,1,step)).T
-        self.y = np.matrix(f(self.x).ravel()).T
+        self.x = np.atleast_2d(np.arange(0,1,step)).T
+        self.y = np.atleast_2d(f(self.x).ravel()).T
+        # self.x = np.matrix(np.arange(0,1,step)).T
+        # self.y = np.matrix(f(self.x).ravel()).T
 
     def test_rbf(self):
         x = self.x
@@ -46,12 +46,12 @@ class TestKernels:
                           6.615000000000001201934677979330e-37,
                           6.615000000000001201934677979330e-37]])
         diag = np.matrix([0.25]*3).T
-        xxreal =  np.around(gp.kernels.radial_basis(hypcov, x, x, False), 40)
-        xyreal =  np.around(gp.kernels.radial_basis(hypcov, x, y, False), 40)
-        diagreal = np.around(gp.kernels.radial_basis(hypcov, x, None, True), 40)
-        assert (xxreal == xx).all()
-        assert (xyreal == xy).all()
-        assert (diagreal == diag).all()
+        xxreal =  gp.kernels.radial_basis(hypcov, x, x, False)
+        xyreal =  gp.kernels.radial_basis(hypcov, x, y, False)
+        diagreal = gp.kernels.radial_basis(hypcov, x, None, True)
+        assert np.allclose(xxreal, xx)
+        assert np.allclose(xyreal, xy)
+        assert np.allclose(diagreal, diag)
 
     def test_rq(self):
         x = self.x
@@ -64,12 +64,9 @@ class TestKernels:
                        [ 7.38904883,  7.38904883,  7.38904883],
                        [ 7.38902704,  7.38902704,  7.38902704]])
         diag = np.matrix([7.3890561]*3).T
-        assert ( gp.kernels.rational_quadratic(hypcov, x, x, False).all() == 
-                 xx.all() )
-        assert ( gp.kernels.rational_quadratic(hypcov, x, y, False).all() == 
-                 xy.all() )
-        assert ( gp.kernels.rational_quadratic(hypcov, x, None, True).all() == 
-                 diag.all() )
+        assert np.allclose(gp.kernels.rational_quadratic(hypcov, x, x, False), xx)
+        assert np.allclose(gp.kernels.rational_quadratic(hypcov, x, y, False), xy)
+        assert np.allclose(gp.kernels.rational_quadratic(hypcov, x, None, True), diag)
 
     def test_per(self):
         x = self.x
@@ -97,36 +94,26 @@ class TestKernels:
         xxreal = gp.kernels.periodic(hypcov, x, x, False)
         xyreal = gp.kernels.periodic(hypcov, x, y, False)
         diagreal = gp.kernels.periodic(hypcov, x, None, True)
-        assert (xxreal == xx).all()
-        assert (xyreal == xy).all()
-        assert (diagreal == diag).all()
+        assert np.allclose(xxreal, xx)
+        assert np.allclose(xyreal, xy)
+        assert np.allclose(diagreal, diag)
 
     def test_sm(self):
         x = self.x
         y = self.y
-        hypcov = np.array([-0.34657359, -2.7080502, 0.08456656])
-        xx = np.array([[  5.000000002799727116808981008944e-01,
-                          1.170752896709145556009001865050e-02,
-                          1.501742198183448997964587389928e-07],
-                       [  1.170752896709145556009001865050e-02,
-                          5.000000002799727116808981008944e-01,
-                          1.170752896709145556009001865050e-02],
-                       [  1.501742198183448997964587389928e-07,
-                          1.170752896709145556009001865050e-02,
-                          5.000000002799727116808981008944e-01]])
-        xy = np.array([[  5.000000002799727116808981008944e-01,
-                          5.000000002799727116808981008944e-01,
-                          5.000000002799727116808981008944e-01],
-                       [  1.170752896709145556009001865050e-02,
-                          1.170752896709124565854942545684e-02,
-                          1.170752896709102708339145237915e-02],
-                       [  1.501742198183448997964587389928e-07,
-                          1.501742198183392882031831792530e-07,
-                          1.501742198183341795357200517541e-07]])
-        diag = np.matrix([0.500000000279972711680898100894]*3).T
-        xxreal = np.around(gp.kernels.spectral_mixture(hypcov, x, x, False), 16)
+        hypcov = np.array([-0.34657359, -0.34657359, -0.34657359,
+                           -2.7080502, -2.7080502, -2.7080502,
+                            0.08456656, 0.08456656, 0.08456656])
+        xx = np.array([[  1.50000000e+00,   3.51225869e-02,   4.50522659e-07],
+                       [  3.51225869e-02,   1.50000000e+00,   3.51225869e-02],
+                       [  4.50522659e-07,   3.51225869e-02,   1.50000000e+00]])
+        xy = np.array([[  1.50000000e+00,   1.50000000e+00,   1.50000000e+00],
+                       [  3.51225869e-02,   3.51225869e-02,   3.51225869e-02],
+                       [  4.50522659e-07,   4.50522659e-07,   4.50522659e-07]])
+        diag = np.matrix([1.5]*3).T
+        xxreal = gp.kernels.spectral_mixture(hypcov, x, x, False)
         xyreal = gp.kernels.spectral_mixture(hypcov, x, y, False)
         diagreal = gp.kernels.spectral_mixture(hypcov, x, None, True)
-        assert (np.around(xxreal, 16) == np.around(xx, 16)).all()
-        assert (np.around(xyreal, 16) == np.around(xy, 16)).all()
-        assert (np.around(diagreal, 16) == np.around(diag, 16)).all()
+        assert np.allclose(xxreal, xx)
+        assert np.allclose(xyreal, xy)
+        assert np.allclose(diagreal, diag)

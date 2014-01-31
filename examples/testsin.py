@@ -23,7 +23,7 @@ y += noise
 negLogML = np.inf
 hypInit = None
 nItr = 10
-Q = 6
+Q = 4
 
 # Define core functions
 likFunc = gp.likelihoods.gaussian

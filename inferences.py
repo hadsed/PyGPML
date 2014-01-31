@@ -33,6 +33,8 @@ def exact(cov, mean, hyp, x, y, pred=True):
         # negative log marginal likelihood, GPML Eq. (2.30)
         nlZ = ( (y-m).T*(alpha) / 2 + np.sum(np.log(np.diag(L))) +
                 n*np.log(2*np.pi*sn2)/2 )
+        np.set_printoptions(16)
+        print nlZ
         return nlZ[0,0]  # Make sure we're giving a number
     # Prediction phase
     else:

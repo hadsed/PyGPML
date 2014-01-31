@@ -14,8 +14,8 @@ import addpath
 import gaussian_process as gp
 
 def test_sqdist():
-    a = np.matrix(np.arange(0,1,0.1)).T
-    b = np.matrix(np.arange(0.5,1.5,0.1)).T
+    a = np.atleast_2d(np.arange(0,1,0.1)).T
+    b = np.atleast_2d(np.arange(0.5,1.5,0.1)).T
     sd_ab = gp.core.sq_dist(a.T,b.T)
     assert np.allclose(sp.spatial.distance.cdist(a,b, 'sqeuclidean'), sd_ab)
     sd_aa = gp.core.sq_dist(a.T,a.T)
