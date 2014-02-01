@@ -28,7 +28,16 @@ class GaussianProcess(object):
     def __init__(self, xtrain=None, ytrain=None, xtest=None, ytest=None, hyp=None,
                  cov='radial_basis', inf='exact', lik='gaussian', mean='zero'):
         """
-        @hyp is a dict comprised of..
+        @hyp is a dict comprised of three keys: mean, lik, and cov, which correspond
+        to hyperparameters for the mean, likelihood, and kernel (covariance) functions.
+
+        @xtrain and @ytrain are the training data, of course, and @xtest and @ytest
+        are the test data (which can overlap with the training data for interpolation).
+        having @ytest is not necessary, but if given, the log probability of the predicted
+        points is also returned in the prediction phase.
+
+        @cov, @inf, @lik, and @mean all correspond to kernel (covariance), inference,
+        likelihood, and mean functions, respectively.
         """
         self.xtrain = np.atleast_2d(xtrain)
         self.ytrain = np.atleast_2d(ytrain)
