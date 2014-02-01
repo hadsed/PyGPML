@@ -31,8 +31,14 @@ Code has been tested with Python 2.7 only. Requires SciPy, NumPy, and matplotlib
 
 --------
 
+## Testing
+
+To test the code, simply navigate to the testing/ directory, edit addpath.py accordingly with the absolute path of PyGPML (it will add it to your python path), and then simply run 'nosetests', or 'nosetests -sv' to see what's going on. Obviously this requires nosetests to be installed.
+
+--------
+
 ## Usage
 
-The test scripts are probably the best place to start understanding how to use the code, and they're found in the examples/ dir. Some of them have data, which is included in examples/data/. Most of the examples have many random starts for training and then take the minimum of that to optimize on further. This is usually done for more complicated kernels or kernel combinations, like the spectral-mixture kernel, but the code gives flexibility for training (and if it doesn't let you do what you want, please let me know).
+The example scripts are probably the best place to start understanding how to use the code, and they're found in the examples/ dir. Some of them have data, which is included in examples/data/. There is a file called addpath.py that requires you to edit in the absolute path of PyGPML folder so that it can add it to your python-path. Same goes for the tests.
 
 Feel free to ping me for help: had sed (at) google mail
