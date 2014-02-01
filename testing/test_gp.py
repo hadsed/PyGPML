@@ -16,10 +16,10 @@ class TestGP:
     def setUp(self):
         f = lambda x: np.sin(2*np.pi*10.*x) + np.sin(2*np.pi*13.*x)
         Ts = 1/150.0
-        self.x = np.matrix(np.arange(0,1,Ts)).T
-        self.xt = np.matrix(np.arange(0,2,Ts)).T
-        self.y = np.matrix(f(self.x).ravel()).T
-        self.yt = np.matrix(f(self.xt).ravel()).T
+        self.x = np.atleast_2d(np.arange(0,1,Ts)).T
+        self.xt = np.atleast_2d(np.arange(0,2,Ts)).T
+        self.y = np.atleast_2d(f(self.x).ravel()).T
+        self.yt = np.atleast_2d(f(self.xt).ravel()).T
         self.hyps = {
             'mean': np.array([]), 
             'lik': [np.log(0.5)], 

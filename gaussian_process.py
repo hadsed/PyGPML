@@ -30,16 +30,10 @@ class GaussianProcess(object):
         """
         @hyp is a dict comprised of..
         """
-        # self.xtrain = np.atleast_2d(xtrain)
-        # self.ytrain = np.atleast_2d(ytrain)
-        # self.xtest = np.atleast_2d(xtest) if xtest is not None else None
-        # self.ytest = np.atleast_2d(ytest) if ytest is not None else None
-
-        self.xtrain = np.matrix(xtrain)
-        self.ytrain = np.matrix(ytrain)
-        self.xtest = np.matrix(xtest) if xtest is not None else None
-        self.ytest = np.matrix(ytest) if ytest is not None else None
-
+        self.xtrain = np.atleast_2d(xtrain)
+        self.ytrain = np.atleast_2d(ytrain)
+        self.xtest = np.atleast_2d(xtest) if xtest is not None else None
+        self.ytest = np.atleast_2d(ytest) if ytest is not None else None
         self.cov = cov
         self.inf = inf
         self.lik = lik
@@ -164,16 +158,23 @@ class GaussianProcess(object):
         # Loop through points
         while nProcessed < nPoints:
             rng = range(nProcessed, min(nProcessed+nBatch, nPoints))
-            xsrng = np.matrix(xs[rng,:])
-            xones = np.matrix(x[ones,:])
+#
+            xsrng = xs[rng,:]
+            xones = x[ones,:]
+#
             Kdiag = self.cov(self.hyp['cov'], xsrng, diag=True)
             Koff = self.cov(self.hyp['cov'], xones, xsrng, diag=False)
             ms = self.mean(hyp['mean'], xsrng)
             N = alpha.shape[1]
             # Conditional mean fs|f, GPML Eqs. (2.25), (2.27)
-            Fmu = np.tile(ms, (1,N)) + Koff.T*alpha[ones,:]
+            # print np.dot(Koff.T, np.matrix(alpha)[ones,:]).shape
+            # print alpha[ones,:].shape
+            # print np.matrix(alpha)[ones,:].shape
+            # print (Koff.T*np.matrix(alpha)[ones,:]).shape
+            # alpha = np.matrix(alpha)
+            Fmu = np.tile(ms, (1,N)) + np.dot(Koff.T, alpha[ones,:])
             # Predictive means, GPML Eqs. (2.25), (2.27)
-            fmu[rng] = np.sum(Fmu, axis=1) / N
+            fmu[rng] = np.atleast_2d(np.sum(Fmu, axis=1) / N).T
             # Calculate the predictive variances, GPML Eq. (2.26)
             if isLtri:
                 # Use Cholesky parameters (L, alpha, sW) if L is triangular
@@ -190,7 +191,7 @@ class GaussianProcess(object):
             # No negative elements allowed (it's numerical noise)
             fs2[rng] = fs2[rng].clip(min=0)
             # In case of sampling (? this was in the original code ?)
-            Fs2 = np.matrix(np.tile(fs2[rng], (1,N)))
+            Fs2 = np.atleast_2d(np.tile(fs2[rng], (1,N)))
             if self.ytest is None:
                 Lp, Ymu, Ys2 = self.lik(hyp=hyp, y=None, mu=Fmu, s2=Fs2)
             else:
@@ -198,11 +199,11 @@ class GaussianProcess(object):
                 Lp, Ymu, Ys2 = self.lik(hyp=hyp, y=Ys, mu=Fmu, s2=Fs2)
 
             # Log probability
-            lp[rng] = np.sum(Lp.reshape(Lp.size/N,N), axis=1) / N
+            lp[rng] = np.atleast_2d(np.sum(Lp.reshape(Lp.size/N,N), axis=1) / N).T
             # Predictive mean ys|y
-            ymu[rng] = np.sum(Ymu.reshape(Ymu.size/N,N), axis=1) / N
+            ymu[rng] = np.atleast_2d(np.sum(Ymu.reshape(Ymu.size/N,N), axis=1) / N).T
             # Predictive variance ys|y
-            ys2[rng] = np.sum(Ys2.reshape(Ys2.size/N,N), axis=1) / N
+            ys2[rng] = np.atleast_2d(np.sum(Ys2.reshape(Ys2.size/N,N), axis=1) / N).T
             # Iterate batch
             nProcessed = rng[-1] + 1
         

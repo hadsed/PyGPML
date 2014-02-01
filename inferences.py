@@ -25,7 +25,7 @@ def exact(cov, mean, hyp, x, y, pred=True):
     # Basically the correlation matrix
     L = sln.cholesky(K/sn2 + np.eye(n))
     # This is just (K + I*noise)^-1 * y, see GPML Eq. (2.27)
-    alpha = np.matrix(sln.cho_solve((L,lower), y-m) / sn2, dtype=np.float64)
+    alpha = np.atleast_2d(sln.cho_solve((L,lower), y-m) / sn2)
     # Sqrt of noise precision vector
     sW = np.ones((n,1)) / np.sqrt(sn2)
     # Training phase
@@ -33,8 +33,8 @@ def exact(cov, mean, hyp, x, y, pred=True):
         # negative log marginal likelihood, GPML Eq. (2.30)
         nlZ = ( (y-m).T*(alpha) / 2 + np.sum(np.log(np.diag(L))) +
                 n*np.log(2*np.pi*sn2)/2 )
-        np.set_printoptions(16)
-        print nlZ
+        # np.set_printoptions(16)
+        # print nlZ
         return nlZ[0,0]  # Make sure we're giving a number
     # Prediction phase
     else:
