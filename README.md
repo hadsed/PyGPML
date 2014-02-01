@@ -29,13 +29,11 @@ For any model functions, like inference, likelihood, mean, and kernel/covariance
 
 Code has been tested with Python 2.7 only. Requires SciPy, NumPy, and matplotlib.
 
---------
 
 ## Testing
 
 To test the code, simply navigate to the testing/ directory, edit addpath.py accordingly with the absolute path of PyGPML (it will add it to your python path), and then simply run 'nosetests', or 'nosetests -sv' to see what's going on. Obviously this requires nosetests to be installed.
 
---------
 
 ## Usage
 
