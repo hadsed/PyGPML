@@ -9,34 +9,8 @@ Description: Any abstract classes and helper functions.
 
 import numpy as np
 from scipy import signal as spsig
+from scipy import spatial as spat
 import collections
-
-def sq_dist(A, B=None):
-    """
-    Calculate the squared-distance sq_dist(x,x') = (x-x')^2. If only
-    one argument is supplied, then it's just sq_dist(x,x).
-    """
-    D, n = A.shape
-
-    if B is None:
-        mu = np.mean(A, axis=1)
-        a = A - np.tile(mu, (1,A.shape[1]))
-        b = a
-        m = n
-    else:
-        d, m = B.shape
-        if d is not D:
-            raise ValueError("sq_dist(): Both matrices must have same"
-                             "number of columns.")
-        mu = (m/(n+m))*np.mean(B, axis=1) + (n/(n+m))*np.mean(A, axis=1)
-        a = A - np.tile(mu, (1,n))
-        b = B - np.tile(mu, (1,m))
-
-    C = np.tile(np.atleast_2d(np.sum(np.multiply(a,a), axis=0)).T, (1,m)) + \
-        np.tile(np.sum(np.multiply(b,b), axis=0), (n,1)) - 2*a.T*b
-    # Make sure we're staying positive :)
-    C = C.clip(min=0)
-    return C
 
 def initSMParamsFourier(Q, x, y, sn, samplingFreq, nPeaks, relMaxOrder=2):
     """
@@ -86,12 +60,13 @@ def initSMParamsFourier(Q, x, y, sn, samplingFreq, nPeaks, relMaxOrder=2):
 
     # Assign hyperparam length scales (sigma's)
     for i in range(0,D):
-        d2 = np.sqrt(sq_dist(np.atleast_2d(x[:,i]).T))
+        xslice = np.atleast_2d(x[:,i]).T
+        d2 = spat.distance.cdist(xslice, xslice, 'sqeuclidean')
         if n > 1:
             d2[d2 == 0] = d2[0,1]
         else:
             d2[d2 == 0] = 1
-        maxshift = np.max(np.max(d2))
+        maxshift = np.max(np.max(np.sqrt(d2)))
         s[i,:] = 1./np.abs(maxshift*np.random.ranf((1,Q)))
     hypinit['cov'][Q + Q*D + np.arange(0,Q*D)] = np.log(s[:]).T
     
@@ -121,15 +96,16 @@ def initSMParams(Q, x, y, sn):
 
     for i in range(0,D):
         # Calculate distances
-        d2 = np.sqrt(sq_dist(np.atleast_2d(x[:,i]).T))
+        xslice = np.atleast_2d(x[:,i]).T
+        d2 = spat.distance.cdist(xslice, xslice, 'sqeuclidean')
         if n > 1:
             d2[d2 == 0] = d2[0,1]
         else:
             d2[d2 == 0] = 1
-        minshift = np.min(np.min(d2))
+        minshift = np.min(np.min(np.sqrt(d2)))
         nyquist = 0.5/minshift
         m[i,:] = nyquist*np.random.ranf((1,Q))
-        maxshift = np.max(np.max(d2))
+        maxshift = np.max(np.max(np.sqrt(d2)))
         s[i,:] = 1./np.abs(maxshift*np.random.ranf((1,Q)))
 
     hypinit['cov'][0:Q] = np.log(w)

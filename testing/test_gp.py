@@ -33,7 +33,7 @@ class TestGP:
         self.hypGP = gp.GaussianProcess(hyp=self.hyps, 
                                         inf=gp.inferences.exact, 
                                         mean=gp.means.zero, 
-                                        cov=gp.kernels.spectral_mixture,#_mat,
+                                        cov=gp.kernels.spectral_mixture,
                                         lik=gp.likelihoods.gaussian, 
                                         xtrain=self.x, ytrain=self.y, 
                                         xtest=self.xt, ytest=self.yt)
@@ -65,8 +65,7 @@ class TestGP:
         hyp, nlml = hypGP.train(method='COBYLA', 
                                 options={'maxiter':100},
                                 write=False)
-        print nlml
-        assert np.allclose(nlml, 80.6742912434)
+        assert np.allclose(nlml, 84.3777971786)
 
     def test_predict(self):
         pred = self.hypGP.predict()
