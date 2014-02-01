@@ -171,16 +171,13 @@ class GaussianProcess(object):
             # Calculate the predictive variances, GPML Eq. (2.26)
             if isLtri:
                 # Use Cholesky parameters (L, alpha, sW) if L is triangular
-                V = np.linalg.solve(L.T, 
-                                    np.multiply(np.tile(sW, (1,len(rng))),Koff))
+                V = np.linalg.solve(L.T, np.tile(sW, (1,len(rng)))*Koff)
                 # Predictive variances
-                fs2[rng] = (Kdiag - 
-                            np.matrix(np.multiply(V,V)).sum(axis=0).T)
+                fs2[rng] = Kdiag - (V*V).sum(axis=0).T
             else:
                 # Use alternative parameterization incase L is not triangular
                 # Predictive variances
-                fs2[rng] = (Kdiag + 
-                            np.matrix(np.multiply(Koff,(L*Koff))).sum(axis=0).T)
+                fs2[rng] = Kdiag + (Koff*(L*Koff)).sum(axis=0).T
             # No negative elements allowed (it's numerical noise)
             fs2[rng] = fs2[rng].clip(min=0)
             # In case of sampling (? this was in the original code ?)

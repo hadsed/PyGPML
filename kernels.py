@@ -113,11 +113,6 @@ def spectral_mixture(hypcov, x=None, z=None, diag=False):
     v = np.exp(2*hypcov[Q+Q*D+np.arange(0,Q*D)]).reshape(D,Q)
     d2list = []
     
-    if 'matrix' in str(type(x)):
-        x = np.asarray(x)
-        if z is not None:
-            z = np.asarray(z)
-    
     if diag:
         d2list = [np.zeros((n,1))]*D
     else:
