@@ -150,28 +150,21 @@ class GaussianProcess(object):
         nPoints = xs.shape[0]
         nProcessed = 0
         nBatch = 1000
-        ymu = np.empty((nPoints,1))
-        ys2 = np.empty((nPoints,1))
-        fmu = np.empty((nPoints,1))
-        fs2 = np.empty((nPoints,1))
-        lp = np.empty((nPoints,1))
+        ymu = np.empty(nPoints)
+        ys2 = np.empty(nPoints)
+        fmu = np.empty(nPoints)
+        fs2 = np.empty(nPoints)
+        lp = np.empty(nPoints)
         # Loop through points
         while nProcessed < nPoints:
             rng = range(nProcessed, min(nProcessed+nBatch, nPoints))
-#
             xsrng = xs[rng,:]
             xones = x[ones,:]
-#
             Kdiag = self.cov(self.hyp['cov'], xsrng, diag=True)
             Koff = self.cov(self.hyp['cov'], xones, xsrng, diag=False)
             ms = self.mean(hyp['mean'], xsrng)
             N = alpha.shape[1]
             # Conditional mean fs|f, GPML Eqs. (2.25), (2.27)
-            # print np.dot(Koff.T, np.matrix(alpha)[ones,:]).shape
-            # print alpha[ones,:].shape
-            # print np.matrix(alpha)[ones,:].shape
-            # print (Koff.T*np.matrix(alpha)[ones,:]).shape
-            # alpha = np.matrix(alpha)
             Fmu = np.tile(ms, (1,N)) + np.dot(Koff.T, alpha[ones,:])
             # Predictive means, GPML Eqs. (2.25), (2.27)
             fmu[rng] = np.atleast_2d(np.sum(Fmu, axis=1) / N).T
@@ -199,23 +192,20 @@ class GaussianProcess(object):
                 Lp, Ymu, Ys2 = self.lik(hyp=hyp, y=Ys, mu=Fmu, s2=Fs2)
 
             # Log probability
-            lp[rng] = np.atleast_2d(np.sum(Lp.reshape(Lp.size/N,N), axis=1) / N).T
+            lp[rng] = np.sum(Lp.reshape(Lp.size/N,N), axis=1) / N
             # Predictive mean ys|y
-            ymu[rng] = np.atleast_2d(np.sum(Ymu.reshape(Ymu.size/N,N), axis=1) / N).T
+            ymu[rng] = np.sum(Ymu.reshape(Ymu.size/N,N), axis=1) / N
             # Predictive variance ys|y
-            ys2[rng] = np.atleast_2d(np.sum(Ys2.reshape(Ys2.size/N,N), axis=1) / N).T
+            ys2[rng] = np.sum(Ys2.reshape(Ys2.size/N,N), axis=1) / N
             # Iterate batch
             nProcessed = rng[-1] + 1
         
-        # return {'ymu': Ymu,
-        #         'ys2': Ys2,
-        #         'fmu': Fmu,
-        #         'fs2': Fs2,
-        #         'lp': None if self.ytest is None else Lp,
-        #         'post': [alpha, L, sW] }
-        return {'ymu': ymu,
-                'ys2': ys2,
-                'fmu': fmu,
-                'fs2': fs2,
-                'lp': None if self.ytest is None else lp,
-                'post': [alpha, L, sW] }
+        return {'ymu': np.atleast_2d(ymu).T,
+                'ys2': np.atleast_2d(ys2).T,
+                'fmu': np.atleast_2d(fmu).T,
+                'fs2': np.atleast_2d(fs2).T,
+                'lp': None if self.ytest is None else np.atleast_2d(lp).T,
+                'post': [np.atleast_2d(alpha).T,
+                         np.atleast_2d(L).T, 
+                         np.atleast_2d(sW).T] 
+                }
