@@ -60,7 +60,7 @@ def initSMParamsFourier(Q, x, y, sn, samplingFreq, nPeaks, relMaxOrder=2):
 
     # Assign hyperparam length scales (sigma's)
     for i in range(0,D):
-        xslice = np.atleast_2d(x[:,i]).T
+        xslice = np.atleast_2d(x[:,i])
         d2 = spat.distance.cdist(xslice, xslice, 'sqeuclidean')
         if n > 1:
             d2[d2 == 0] = d2[0,1]
@@ -96,7 +96,7 @@ def initSMParams(Q, x, y, sn):
 
     for i in range(0,D):
         # Calculate distances
-        xslice = np.atleast_2d(x[:,i]).T
+        xslice = np.atleast_2d(x[:,i])
         d2 = spat.distance.cdist(xslice, xslice, 'sqeuclidean')
         if n > 1:
             d2[d2 == 0] = d2[0,1]

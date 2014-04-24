@@ -119,13 +119,13 @@ def spectral_mixture(hypcov, x=None, z=None, diag=False):
         if x is z:
             d2list = [np.zeros((n,n))]*D
             for j in np.arange(0,D):
-                xslice = np.atleast_2d(x[:,j]).T
+                xslice = np.atleast_2d(x[:,j])
                 d2list[j] = sp.spatial.distance.cdist(xslice, xslice, 'sqeuclidean')
         else:
             d2list = [np.zeros((n,z.shape[0]))]*D
             for j in np.arange(0,D):
-                xslice = np.atleast_2d(x[:,j]).T
-                zslice = np.atleast_2d(z[:,j]).T
+                xslice = np.atleast_2d(x[:,j])
+                zslice = np.atleast_2d(z[:,j])
                 d2list[j] = sp.spatial.distance.cdist(xslice, zslice, 'sqeuclidean')
 
     # Define kernel functions
